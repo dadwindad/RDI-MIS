@@ -130,6 +130,19 @@ const StorageGateway: React.FC<StorageGatewayProps> = ({ currentUser }) => {
             <div style={{ fontSize: '0.875rem', color: 'var(--text-secondary)' }}>Across {files.length} files</div>
           </div>
         </div>
+
+        <div className="card" style={{ display: 'flex', alignItems: 'center', gap: '1.5rem' }}>
+          <div style={{ padding: '1rem', backgroundColor: 'rgba(239, 68, 68, 0.1)', borderRadius: '0.75rem', color: 'var(--status-danger)' }}>
+            <Trash2 size={32} />
+          </div>
+          <div>
+            <div style={{ fontSize: '0.875rem', color: 'var(--text-secondary)' }}>Soft Deleted Storage</div>
+            <div style={{ fontSize: '1.5rem', fontWeight: 700, color: 'var(--status-danger)' }}>
+              {formatBytes(files.filter(f => f.isDeleted).reduce((acc, file) => acc + file.size, 0))}
+            </div>
+            <div style={{ fontSize: '0.875rem', color: 'var(--text-secondary)' }}>Across {files.filter(f => f.isDeleted).length} files</div>
+          </div>
+        </div>
       </div>
 
       <div className="data-table-wrapper">

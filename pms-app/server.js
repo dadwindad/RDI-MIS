@@ -13,7 +13,7 @@ app.use('/uploads', express.static('uploads'));
 const requireAuth = (req, res, next) => {
   const token = req.headers['authorization']?.split(' ')[1];
   if (!token) return res.status(401).json({ error: 'Missing JWT Token' });
-  
+
   try {
     // ในโปรดักชันต้องใช้ jwt.verify(...) 
     const payload = JSON.parse(Buffer.from(token.split('.')[1], 'base64').toString());
@@ -21,6 +21,19 @@ const requireAuth = (req, res, next) => {
     next();
   } catch (e) {
     res.status(401).json({ error: 'Invalid Token' });
+  }
+};
+
+// Helper to send Audit Log to Core App
+const logAudit = async (user_name, action, details) => {
+  try {
+    await fetch('http://localhost:3001/api/audit', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ user_name, action, details })
+    });
+  } catch (e) {
+    console.error('Failed to send audit log to core:', e.message);
   }
 };
 
@@ -32,12 +45,13 @@ const requireAuth = (req, res, next) => {
 app.post('/api/pms/projects', requireAuth, (req, res) => {
   const { fiscal_year_id, fund_type, title_th, title_en, budget_amount } = req.body;
   const id = 'PRJ-' + Date.now();
-  
+
   db.run(
     "INSERT INTO projects (id, fiscal_year_id, fund_type, title_th, title_en, budget_amount, budget_balance, status) VALUES (?, ?, ?, ?, ?, ?, ?, 'DRAFT')",
     [id, fiscal_year_id, fund_type, title_th, title_en, budget_amount || 0, budget_amount || 0],
-    function(err) {
+    function (err) {
       if (err) return res.status(500).json({ error: err.message });
+      logAudit(req.coreUser?.name || 'System', 'CREATE_PROJECT', `Created project: ${title_th} (${id})`);
       res.status(201).json({ success: true, id, status: 'DRAFT' });
     }
   );
@@ -47,13 +61,14 @@ app.post('/api/pms/projects', requireAuth, (req, res) => {
 app.put('/api/pms/projects/:id', requireAuth, (req, res) => {
   const { fiscal_year_id, fund_type, title_th, title_en, budget_amount } = req.body;
   const { id } = req.params;
-  
+
   db.run(
     "UPDATE projects SET fiscal_year_id=?, fund_type=?, title_th=?, title_en=?, budget_amount=?, budget_balance=?, updated_at=CURRENT_TIMESTAMP WHERE id=? AND status='DRAFT' AND is_deleted=0",
     [fiscal_year_id, fund_type, title_th, title_en, budget_amount || 0, budget_amount || 0, id],
-    function(err) {
+    function (err) {
       if (err) return res.status(500).json({ error: err.message });
       if (this.changes === 0) return res.status(400).json({ error: 'Cannot update. Only DRAFT projects can be edited.' });
+      logAudit(req.coreUser?.name || 'System', 'UPDATE_PROJECT', `Updated project: ${title_th} (${id})`);
       res.json({ success: true, updated: this.changes });
     }
   );
@@ -71,19 +86,20 @@ app.get('/api/pms/projects', requireAuth, (req, res) => {
 app.put('/api/pms/projects/:id/status', requireAuth, (req, res) => {
   const { status } = req.body;
   const { id } = req.params;
-  
+
   // เช็ค Role ก่อนอนุญาต (Mock logic: เช็คจาก req.coreUser.role)
   // if (req.coreUser.role !== 'admin' && status === 'APPROVED') return res.status(403).send('Forbidden');
 
-  db.run("UPDATE projects SET status = ?, updated_at = CURRENT_TIMESTAMP WHERE id = ? AND is_deleted = 0", [status, id], function(err) {
+  db.run("UPDATE projects SET status = ?, updated_at = CURRENT_TIMESTAMP WHERE id = ? AND is_deleted = 0", [status, id], function (err) {
     if (err) return res.status(500).json({ error: err.message });
-    
+
     // FR-INT-01 (Event-Driven): ถ้าสถานะถูกอนุมัติ ให้พ่น Webhook แจ้ง App: Finance 
     if (status === 'APPROVED') {
       console.log(`[Event Triggered] Webhook dispatched to Finance App for Project ID: ${id}`);
       // fetch('https://api-finance.research.ac.th/webhook/pms-approved', { method: 'POST', ... })
     }
 
+    logAudit(req.coreUser?.name || 'System', 'UPDATE_PROJECT_STATUS', `Updated project status to ${status} (${id})`);
     res.json({ success: true, updated: this.changes, status });
   });
 });
@@ -91,12 +107,13 @@ app.put('/api/pms/projects/:id/status', requireAuth, (req, res) => {
 // 4. Soft Delete Project (FR-PRJ-02)
 app.delete('/api/pms/projects/:id', requireAuth, (req, res) => {
   const { id } = req.params;
-  
+
   // ลบแบบ Soft Delete และอนุญาตเฉพาะสถานะ DRAFT เท่านั้น
-  db.run("UPDATE projects SET is_deleted = 1 WHERE id = ? AND status = 'DRAFT'", [id], function(err) {
+  db.run("UPDATE projects SET is_deleted = 1 WHERE id = ? AND status = 'DRAFT'", [id], function (err) {
     if (err) return res.status(500).json({ error: err.message });
     if (this.changes === 0) return res.status(400).json({ error: 'Cannot delete. Only DRAFT projects can be deleted or project not found.' });
-    
+
+    logAudit(req.coreUser?.name || 'System', 'DELETE_PROJECT', `Soft-deleted project (${id})`);
     res.json({ success: true, message: 'Project soft-deleted successfully' });
   });
 });
@@ -104,7 +121,7 @@ app.delete('/api/pms/projects/:id', requireAuth, (req, res) => {
 // 5. EC Status Webhook (FR-INT-02)
 app.post('/api/pms/webhook/ec-status', requireAuth, (req, res) => {
   const { project_id, is_ec_approved } = req.body;
-  db.run("UPDATE projects SET is_ec_approved = ? WHERE id = ?", [is_ec_approved ? 1 : 0, project_id], function(err) {
+  db.run("UPDATE projects SET is_ec_approved = ? WHERE id = ?", [is_ec_approved ? 1 : 0, project_id], function (err) {
     if (err) return res.status(500).json({ error: err.message });
     res.json({ success: true });
   });
@@ -114,13 +131,13 @@ const handleBase64Upload = (document_base64, document_name, uploader_name, activ
   if (document_base64 && document_name) {
     const storagePath = '../storage';
     if (!fs.existsSync(storagePath)) fs.mkdirSync(storagePath);
-    
+
     // อนุญาตให้ใช้ตัวอักษรภาษาไทยได้ในชื่อไฟล์
     const safeName = document_name.replace(/[^\wก-๙.-]/g, '_');
     const uploader = uploader_name || 'System';
     const activity = activity_name || 'General';
     const finalName = `[PMS]_[${activity}]_[${uploader}]_${Date.now()}-${safeName}`;
-    
+
     const path = storagePath + '/' + finalName;
     const base64Data = document_base64.replace(/^data:.*,/, '');
     fs.writeFileSync(path, base64Data, 'base64');
@@ -143,12 +160,13 @@ app.post('/api/pms/projects/:id/attach', requireAuth, (req, res) => {
       let existingDocs = [];
       if (row && row.proposal_doc_url) {
         try { existingDocs = JSON.parse(row.proposal_doc_url); }
-        catch(e) { existingDocs = [row.proposal_doc_url]; }
+        catch (e) { existingDocs = [row.proposal_doc_url]; }
       }
       existingDocs.push(newDocUrl);
 
-      db.run("UPDATE projects SET proposal_doc_url = ?, updated_at = CURRENT_TIMESTAMP WHERE id = ?", [JSON.stringify(existingDocs), id], function(err2) {
+      db.run("UPDATE projects SET proposal_doc_url = ?, updated_at = CURRENT_TIMESTAMP WHERE id = ?", [JSON.stringify(existingDocs), id], function (err2) {
         if (err2) return res.status(500).json({ error: err2.message });
+        logAudit(req.coreUser?.name || 'System', 'ATTACH_DOCUMENT', `Attached document to project (${id})`);
         res.json({ success: true, updated: this.changes });
       });
     });
@@ -168,19 +186,20 @@ app.post('/api/pms/projects/:id/deduct', requireAuth, (req, res) => {
     const finalDocUrl = handleBase64Upload(document_base64, document_name, created_by, 'ตัดยอดงบประมาณ') || document_url || '';
 
     // Deduct from balance
-  db.run("UPDATE projects SET budget_balance = budget_balance - ?, updated_at = CURRENT_TIMESTAMP WHERE id = ?", [amount, id], function(err) {
-    if (err) return res.status(500).json({ error: err.message });
-    
-    // Insert transaction
-    db.run(
-      "INSERT INTO budget_transactions (id, project_id, amount, description, document_url, created_by, action_date) VALUES (?, ?, ?, ?, ?, ?, ?)",
-      [txId, id, amount, description, finalDocUrl, created_by, action_date || new Date().toISOString().split('T')[0]],
-      function(err2) {
-        if (err2) return res.status(500).json({ error: err2.message });
-        res.json({ success: true, txId });
-      }
-    );
-  });
+    db.run("UPDATE projects SET budget_balance = budget_balance - ?, updated_at = CURRENT_TIMESTAMP WHERE id = ?", [amount, id], function (err) {
+      if (err) return res.status(500).json({ error: err.message });
+
+      // Insert transaction
+      db.run(
+        "INSERT INTO budget_transactions (id, project_id, amount, description, document_url, created_by, action_date) VALUES (?, ?, ?, ?, ?, ?, ?)",
+        [txId, id, amount, description, finalDocUrl, created_by, action_date || new Date().toISOString().split('T')[0]],
+        function (err2) {
+          if (err2) return res.status(500).json({ error: err2.message });
+          logAudit(req.coreUser?.name || 'System', 'DEDUCT_BUDGET', `Deducted budget: ${amount} THB from project (${id})`);
+          res.json({ success: true, txId });
+        }
+      );
+    });
   } catch (err) {
     res.status(500).json({ error: err.message });
   }
@@ -208,11 +227,11 @@ app.post('/api/pms/projects/:id/close', requireAuth, (req, res) => {
       let existingDocs = [];
       if (row && row.closure_doc_url) {
         try { existingDocs = JSON.parse(row.closure_doc_url); }
-        catch(e) { existingDocs = [row.closure_doc_url]; }
+        catch (e) { existingDocs = [row.closure_doc_url]; }
       }
       existingDocs.push(newDocUrl);
 
-      db.run("UPDATE projects SET status = 'CLOSED', closure_doc_url = ?, updated_at = CURRENT_TIMESTAMP WHERE id = ?", [JSON.stringify(existingDocs), id], function(err2) {
+      db.run("UPDATE projects SET status = 'CLOSED', closure_doc_url = ?, updated_at = CURRENT_TIMESTAMP WHERE id = ?", [JSON.stringify(existingDocs), id], function (err2) {
         if (err2) return res.status(500).json({ error: err2.message });
         res.json({ success: true, updated: this.changes });
       });
@@ -226,27 +245,27 @@ app.post('/api/pms/projects/:id/close', requireAuth, (req, res) => {
 app.post('/api/pms/projects/:id/remove-document', requireAuth, (req, res) => {
   const { id } = req.params;
   const { doc_type, url } = req.body;
-  
+
   if (doc_type !== 'proposal' && doc_type !== 'closure') {
     return res.status(400).json({ error: 'Invalid document type' });
   }
 
   const column = doc_type === 'proposal' ? 'proposal_doc_url' : 'closure_doc_url';
-  
+
   db.get(`SELECT ${column} FROM projects WHERE id = ?`, [id], (err, row) => {
     if (err) return res.status(500).json({ error: err.message });
     let existingDocs = [];
     if (row && row[column]) {
       try { existingDocs = JSON.parse(row[column]); }
-      catch(e) { existingDocs = [row[column]]; }
+      catch (e) { existingDocs = [row[column]]; }
     }
-    
+
     existingDocs = existingDocs.filter(docUrl => docUrl !== url);
     const newValue = existingDocs.length > 0 ? JSON.stringify(existingDocs) : null;
 
-    db.run(`UPDATE projects SET ${column} = ?, updated_at = CURRENT_TIMESTAMP WHERE id = ?`, [newValue, id], async function(err2) {
+    db.run(`UPDATE projects SET ${column} = ?, updated_at = CURRENT_TIMESTAMP WHERE id = ?`, [newValue, id], async function (err2) {
       if (err2) return res.status(500).json({ error: err2.message });
-      
+
       // Soft delete from central storage gateway
       try {
         const filename = decodeURIComponent(url.split('/').pop());
@@ -257,6 +276,30 @@ app.post('/api/pms/projects/:id/remove-document', requireAuth, (req, res) => {
 
       res.json({ success: true, updated: this.changes });
     });
+  });
+});
+
+// --- FUND TYPES API ---
+app.get('/api/pms/fund-types', requireAuth, (req, res) => {
+  db.all("SELECT * FROM fund_types ORDER BY id", [], (err, rows) => {
+    if (err) return res.status(500).json({ error: err.message });
+    res.json(rows);
+  });
+});
+
+app.post('/api/pms/fund-types', requireAuth, (req, res) => {
+  const { name } = req.body;
+  const id = 'FUND-' + Date.now();
+  db.run("INSERT INTO fund_types (id, name) VALUES (?, ?)", [id, name], function (err) {
+    if (err) return res.status(500).json({ error: err.message });
+    res.json({ success: true, id });
+  });
+});
+
+app.delete('/api/pms/fund-types/:id', requireAuth, (req, res) => {
+  db.run("DELETE FROM fund_types WHERE id = ?", [req.params.id], function (err) {
+    if (err) return res.status(500).json({ error: err.message });
+    res.json({ success: true, deleted: this.changes });
   });
 });
 

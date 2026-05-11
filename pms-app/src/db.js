@@ -65,6 +65,17 @@ db.serialize(() => {
     is_deleted INTEGER DEFAULT 0,
     created_at DATETIME DEFAULT CURRENT_TIMESTAMP
   )`);
+
+  // Fund Types Table
+  db.run(`CREATE TABLE IF NOT EXISTS fund_types (
+    id TEXT PRIMARY KEY,
+    name TEXT NOT NULL UNIQUE
+  )`, () => {
+    // Seed initial fund types if empty using INSERT OR IGNORE
+    db.run("INSERT OR IGNORE INTO fund_types VALUES ('FUND-1', 'ทุนสนับสนุนงานมูลฐาน (Fundamental Fund)')");
+    db.run("INSERT OR IGNORE INTO fund_types VALUES ('FUND-2', 'ทุนวิจัยภายใน (RDI)')");
+    db.run("INSERT OR IGNORE INTO fund_types VALUES ('FUND-3', 'ทุนวิจัยภายนอก (External)')");
+  });
 });
 
 export default db;

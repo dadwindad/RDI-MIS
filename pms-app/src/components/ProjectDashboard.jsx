@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Blocks, Plus, Trash2, CheckCircle, Edit2, X, Wallet, ChevronLeft, Paperclip, CheckSquare, FileText, User } from 'lucide-react';
+import { Blocks, Plus, Trash2, CheckCircle, Edit2, X, Wallet, ChevronLeft, Paperclip, CheckSquare, FileText, User, Eye } from 'lucide-react';
 
 const ProjectDashboard = () => {
   const [projects, setProjects] = useState([]);
@@ -9,6 +9,11 @@ const ProjectDashboard = () => {
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [isEditing, setIsEditing] = useState(false);
   const [formData, setFormData] = useState({ id: '', fiscal_year_id: '', fund_type: 'ทุนสนับสนุนงานมูลฐาน (Fundamental Fund)', title_th: '', title_en: '', budget_amount: 0 });
+
+  // States สำหรับจัดการ Fund Type
+  const [fundTypes, setFundTypes] = useState([]);
+  const [isFundModalOpen, setIsFundModalOpen] = useState(false);
+  const [newFundName, setNewFundName] = useState('');
 
   // States สำหรับหน้ารายละเอียดโครงการ (จัดการงบ)
   const [selectedProject, setSelectedProject] = useState(null);
@@ -60,8 +65,32 @@ const ProjectDashboard = () => {
     }
   };
 
+  const fetchFundTypes = async () => {
+    try {
+      const res = await fetch('http://localhost:3002/api/pms/fund-types', {
+        headers: { 'Authorization': `Bearer ${getAuthToken()}` }
+      });
+      if (res.ok) {
+        const data = await res.json();
+        if (data.length === 0) {
+          // Fallback ถ้าใน DB ไม่มีข้อมูล
+          setFundTypes([
+            { id: 'FUND-1', name: 'ทุนสนับสนุนงานมูลฐาน (Fundamental Fund)' },
+            { id: 'FUND-2', name: 'ทุนวิจัยภายใน (RDI)' },
+            { id: 'FUND-3', name: 'ทุนวิจัยภายนอก (External)' }
+          ]);
+        } else {
+          setFundTypes(data);
+        }
+      }
+    } catch (e) {
+      console.error(e);
+    }
+  };
+
   useEffect(() => {
     fetchProjects();
+    fetchFundTypes();
   }, []);
 
   const handleSaveProject = async (e) => {
@@ -522,12 +551,15 @@ const ProjectDashboard = () => {
                 </td>
                 <td style={{ padding: '1rem' }}>
                   <div style={{ display: 'flex', gap: '0.5rem', flexWrap: 'wrap' }}>
-                    <button onClick={() => { setSelectedProject(prj); fetchTransactions(prj.id); }} style={{ padding: '0.4rem 0.5rem', backgroundColor: 'var(--bg-secondary)', border: '1px solid var(--border-color)', borderRadius: '0.5rem', cursor: 'pointer', fontWeight: 500 }}>
-                      จัดการ
+                    <button onClick={() => { setSelectedProject(prj); fetchTransactions(prj.id); }} style={{ padding: '0.4rem 0.5rem', backgroundColor: 'var(--bg-secondary)', border: '1px solid var(--border-color)', borderRadius: '0.5rem', cursor: 'pointer', fontWeight: 500, display: 'flex', alignItems: 'center', justifyContent: 'center' }} title="ดูรายละเอียด">
+                      <Eye size={16} />
+                    </button>
+                    <button onClick={() => { setIsEditing(true); setFormData({ id: prj.id, fiscal_year_id: prj.fiscal_year_id, fund_type: prj.fund_type, title_th: prj.title_th, title_en: prj.title_en || '', budget_amount: prj.budget_amount }); setIsModalOpen(true); }} style={{ padding: '0.4rem 0.5rem', color: 'var(--accent-color)', background: 'transparent', border: '1px solid var(--accent-color)', borderRadius: '0.5rem', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center' }} title="แก้ไข">
+                      <Edit2 size={16} />
                     </button>
                     {prj.status === 'DRAFT' && (
                       <>
-                        <button onClick={() => approveProject(prj.id)} style={{ padding: '0.4rem 0.5rem', color: 'var(--status-success)', background: 'transparent', border: '1px solid var(--status-success)', borderRadius: '0.5rem', cursor: 'pointer' }}>
+                        <button onClick={() => approveProject(prj.id)} style={{ padding: '0.4rem 0.5rem', color: 'var(--status-success)', background: 'transparent', border: '1px solid var(--status-success)', borderRadius: '0.5rem', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '0.25rem' }}>
                           <CheckCircle size={14} /> Approve
                         </button>
                       </>
@@ -562,21 +594,81 @@ const ProjectDashboard = () => {
                 <div>
                   <label style={{ display: 'block', marginBottom: '0.5rem', fontWeight: 500, fontSize: '0.875rem' }}>Total Budget (THB)</label>
                   <input type="number" min="0" value={formData.budget_amount} onChange={e => setFormData({...formData, budget_amount: parseFloat(e.target.value) || 0})} style={{ width: '100%', padding: '0.75rem', border: '1px solid var(--border-color)', borderRadius: '0.5rem' }} required />
+                  <div style={{ fontSize: '0.875rem', color: 'var(--accent-color)', marginTop: '0.25rem', fontWeight: 500 }}>
+                    {formatCurrency(formData.budget_amount)}
+                  </div>
                 </div>
               </div>
               <div>
                 <label style={{ display: 'block', marginBottom: '0.5rem', fontWeight: 500, fontSize: '0.875rem' }}>Fund Type</label>
-                <select value={formData.fund_type} onChange={e => setFormData({...formData, fund_type: e.target.value})} style={{ width: '100%', padding: '0.75rem', border: '1px solid var(--border-color)', borderRadius: '0.5rem', backgroundColor: 'var(--bg-color)' }}>
-                  <option value="ทุนสนับสนุนงานมูลฐาน (Fundamental Fund)">ทุนสนับสนุนงานมูลฐาน (Fundamental Fund)</option>
-                  <option value="ทุนวิจัยภายใน (RDI)">ทุนวิจัยภายใน (RDI)</option>
-                  <option value="ทุนวิจัยภายนอก (External)">ทุนวิจัยภายนอก (External)</option>
-                </select>
+                <div style={{ display: 'flex', gap: '0.5rem' }}>
+                  <select value={formData.fund_type} onChange={e => setFormData({...formData, fund_type: e.target.value})} style={{ flex: 1, padding: '0.75rem', border: '1px solid var(--border-color)', borderRadius: '0.5rem', backgroundColor: 'var(--bg-color)' }}>
+                    {fundTypes.map(ft => (
+                      <option key={ft.id} value={ft.name}>{ft.name}</option>
+                    ))}
+                  </select>
+                  <button type="button" onClick={() => setIsFundModalOpen(true)} style={{ padding: '0.75rem', backgroundColor: 'var(--bg-secondary)', border: '1px solid var(--border-color)', borderRadius: '0.5rem', cursor: 'pointer' }} title="จัดการ Fund Type">
+                    <Edit2 size={16} />
+                  </button>
+                </div>
               </div>
               <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '1rem', marginTop: '1rem' }}>
                 <button type="button" onClick={() => setIsModalOpen(false)} style={{ padding: '0.75rem 1.5rem', background: 'transparent', border: '1px solid var(--border-color)', borderRadius: '0.5rem', cursor: 'pointer' }}>Cancel</button>
                 <button type="submit" style={{ padding: '0.75rem 1.5rem', backgroundColor: 'var(--accent-color)', color: 'white', border: 'none', borderRadius: '0.5rem', cursor: 'pointer', fontWeight: 600 }}>Save Project</button>
               </div>
             </form>
+          </div>
+        </div>
+      )}
+
+      {/* FUND TYPE MANAGEMENT MODAL */}
+      {isFundModalOpen && (
+        <div style={{ position: 'fixed', top: 0, left: 0, right: 0, bottom: 0, backgroundColor: 'rgba(0,0,0,0.5)', display: 'flex', justifyContent: 'center', alignItems: 'center', zIndex: 1100 }}>
+          <div style={{ backgroundColor: 'var(--bg-color)', padding: '2rem', borderRadius: '1rem', width: '100%', maxWidth: '400px', boxShadow: '0 20px 25px -5px rgba(0, 0, 0, 0.1)' }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1.5rem' }}>
+              <h2 style={{ margin: 0, fontSize: '1.25rem' }}>จัดการ Fund Type</h2>
+              <button onClick={() => setIsFundModalOpen(false)} style={{ background: 'transparent', border: 'none', cursor: 'pointer' }}><X size={24} /></button>
+            </div>
+            
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
+              <div style={{ display: 'flex', gap: '0.5rem' }}>
+                <input type="text" value={newFundName} onChange={e => setNewFundName(e.target.value)} placeholder="ชื่อ Fund Type ใหม่" style={{ flex: 1, padding: '0.5rem', border: '1px solid var(--border-color)', borderRadius: '0.25rem' }} />
+                <button onClick={async () => {
+                  if (!newFundName.trim()) return;
+                  const res = await fetch('http://localhost:3002/api/pms/fund-types', {
+                    method: 'POST',
+                    headers: { 'Authorization': `Bearer ${getAuthToken()}`, 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ name: newFundName })
+                  });
+                  if (res.ok) {
+                    setNewFundName('');
+                    fetchFundTypes();
+                  }
+                }} style={{ padding: '0.5rem 1rem', backgroundColor: 'var(--accent-color)', color: 'white', border: 'none', borderRadius: '0.25rem', cursor: 'pointer', fontWeight: 600 }}>
+                  เพิ่ม
+                </button>
+              </div>
+
+              <div style={{ maxHeight: '200px', overflowY: 'auto', display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
+                {fundTypes.map(ft => (
+                  <div key={ft.id} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '0.5rem', backgroundColor: 'var(--bg-secondary)', borderRadius: '0.25rem' }}>
+                    <span>{ft.name}</span>
+                    <button onClick={async () => {
+                      if (!confirm(`คุณต้องการลบ ${ft.name} ใช่หรือไม่?`)) return;
+                      const res = await fetch(`http://localhost:3002/api/pms/fund-types/${ft.id}`, {
+                        method: 'DELETE',
+                        headers: { 'Authorization': `Bearer ${getAuthToken()}` }
+                      });
+                      if (res.ok) {
+                        fetchFundTypes();
+                      }
+                    }} style={{ background: 'transparent', border: 'none', color: 'var(--status-danger)', cursor: 'pointer' }}>
+                      <Trash2 size={16} />
+                    </button>
+                  </div>
+                ))}
+              </div>
+            </div>
           </div>
         </div>
       )}
