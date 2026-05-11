@@ -127,7 +127,7 @@ const Dashboard: React.FC = () => {
               <th>App ID</th>
               <th>App Name</th>
               <th>Endpoint URL</th>
-              <th>Description</th>
+              <th>Required Roles</th>
               <th>Status</th>
             </tr>
           </thead>
@@ -142,11 +142,24 @@ const Dashboard: React.FC = () => {
               </tr>
             ) : (
               apps.map((app: any) => (
-                <tr key={app.id}>
-                  <td style={{ fontFamily: 'monospace', fontWeight: 500 }}>{app.id}</td>
+                <tr key={app.app_id || app.id}>
+                  <td style={{ fontFamily: 'monospace', fontWeight: 500 }}>{app.app_id || app.id}</td>
                   <td style={{ fontWeight: 600 }}>{app.name}</td>
-                  <td><a href={app.endpoint_url} target="_blank" rel="noreferrer" style={{ color: 'var(--accent-color)', textDecoration: 'none' }}>{app.endpoint_url}</a></td>
-                  <td style={{ color: 'var(--text-secondary)' }}>{app.description}</td>
+                  <td><a href={app.api_endpoint || app.endpoint_url} target="_blank" rel="noreferrer" style={{ color: 'var(--accent-color)', textDecoration: 'none' }}>{app.api_endpoint || app.endpoint_url}</a></td>
+                  <td>
+                    <div style={{ display: 'flex', gap: '0.25rem', flexWrap: 'wrap' }}>
+                      {app.required_roles ? (() => {
+                        try {
+                          const roles = typeof app.required_roles === 'string' ? JSON.parse(app.required_roles) : app.required_roles;
+                          return Array.isArray(roles) ? roles.map((role: string) => (
+                            <span key={role} style={{ fontSize: '0.75rem', padding: '0.1rem 0.4rem', backgroundColor: 'var(--bg-tertiary)', borderRadius: '0.25rem' }}>{role}</span>
+                          )) : <span style={{ fontSize: '0.75rem', padding: '0.1rem 0.4rem', backgroundColor: 'var(--bg-tertiary)', borderRadius: '0.25rem' }}>{roles}</span>;
+                        } catch(e) {
+                          return <span style={{ fontSize: '0.75rem', padding: '0.1rem 0.4rem', backgroundColor: 'var(--bg-tertiary)', borderRadius: '0.25rem' }}>{app.required_roles}</span>;
+                        }
+                      })() : '-'}
+                    </div>
+                  </td>
                   <td>
                     <span className={`badge ${app.status === 'Active' ? 'badge-success' : app.status === 'Development' ? 'badge-warning' : 'badge-danger'}`}>
                       {app.status}
