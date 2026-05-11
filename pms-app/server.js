@@ -62,21 +62,33 @@ app.put('/api/pms/projects/:id', requireAuth, (req, res) => {
   const { fiscal_year_id, fund_type, title_th, title_en, budget_amount } = req.body;
   const { id } = req.params;
 
-  db.run(
-    "UPDATE projects SET fiscal_year_id=?, fund_type=?, title_th=?, title_en=?, budget_amount=?, budget_balance=?, updated_at=CURRENT_TIMESTAMP WHERE id=? AND status='DRAFT' AND is_deleted=0",
-    [fiscal_year_id, fund_type, title_th, title_en, budget_amount || 0, budget_amount || 0, id],
-    function (err) {
-      if (err) return res.status(500).json({ error: err.message });
-      if (this.changes === 0) return res.status(400).json({ error: 'Cannot update. Only DRAFT projects can be edited.' });
-      logAudit(req.coreUser?.name || 'System', 'UPDATE_PROJECT', `Updated project: ${title_th} (${id})`);
-      res.json({ success: true, updated: this.changes });
-    }
-  );
+  db.get("SELECT SUM(amount) as total_spent FROM budget_transactions WHERE project_id = ?", [id], (err, row) => {
+    if (err) return res.status(500).json({ error: err.message });
+    const totalSpent = row ? row.total_spent || 0 : 0;
+    const newBalance = (budget_amount || 0) - totalSpent;
+
+    db.run(
+      "UPDATE projects SET fiscal_year_id=?, fund_type=?, title_th=?, title_en=?, budget_amount=?, budget_balance=?, updated_at=CURRENT_TIMESTAMP WHERE id=? AND status='DRAFT' AND is_deleted=0",
+      [fiscal_year_id, fund_type, title_th, title_en, budget_amount || 0, newBalance, id],
+      function (err2) {
+        if (err2) return res.status(500).json({ error: err2.message });
+        if (this.changes === 0) return res.status(400).json({ error: 'Cannot update. Only DRAFT projects can be edited.' });
+        logAudit(req.coreUser?.name || 'System', 'UPDATE_PROJECT', `Updated project: ${title_th} (${id})`);
+        res.json({ success: true, updated: this.changes });
+      }
+    );
+  });
 });
 
 // 2. Get Projects (ดึงมาเฉพาะรายการที่ไม่ได้ถูกลบ is_deleted=0)
 app.get('/api/pms/projects', requireAuth, (req, res) => {
-  db.all("SELECT * FROM projects WHERE is_deleted = 0 ORDER BY created_at DESC", [], (err, rows) => {
+  db.all(`
+    SELECT p.*, 
+    (p.budget_amount - COALESCE((SELECT SUM(amount) FROM budget_transactions WHERE project_id = p.id), 0)) as budget_balance 
+    FROM projects p 
+    WHERE p.is_deleted = 0 
+    ORDER BY p.created_at DESC
+  `, [], (err, rows) => {
     if (err) return res.status(500).json({ error: err.message });
     res.json(rows);
   });

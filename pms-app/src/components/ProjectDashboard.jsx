@@ -371,7 +371,9 @@ const ProjectDashboard = () => {
           <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
             <div style={{ backgroundColor: 'var(--bg-color)', padding: '1.5rem', borderRadius: '1rem', boxShadow: '0 2px 4px rgba(0,0,0,0.05)', textAlign: 'center' }}>
               <div style={{ fontSize: '0.875rem', color: 'var(--text-secondary)', marginBottom: '0.5rem' }}>งบประมาณคงเหลือ</div>
-              <div style={{ fontSize: '2rem', fontWeight: 700, color: 'var(--status-success)', marginBottom: '0.5rem' }}>{formatCurrency(selectedProject.budget_balance)}</div>
+              <div style={{ fontSize: '2rem', fontWeight: 700, color: 'var(--status-success)', marginBottom: '0.5rem' }}>
+                {formatCurrency(selectedProject.budget_amount - transactions.reduce((sum, tx) => sum + tx.amount, 0))}
+              </div>
               <div style={{ fontSize: '0.75rem', color: 'var(--text-secondary)' }}>จากงบจัดสรรทั้งหมด: {formatCurrency(selectedProject.budget_amount)}</div>
             </div>
 

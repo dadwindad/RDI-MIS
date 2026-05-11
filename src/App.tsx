@@ -44,7 +44,7 @@ function App() {
       <div className={`main-content ${sidebarOpen ? 'sidebar-open' : 'sidebar-closed'}`}>
         <Header sidebarOpen={sidebarOpen} setSidebarOpen={setSidebarOpen} onLogout={handleLogout} currentUser={currentUser} />
         <main className="content-area">
-          {activeMenu === 'dashboard' && <Dashboard />}
+          {activeMenu === 'dashboard' && <Dashboard setActiveMenu={setActiveMenu} />}
           {activeMenu.startsWith('org') && <Organization activeApp={activeMenu} setActiveMenu={setActiveMenu} />}
           {activeMenu === 'users' && <UserManagement currentUser={currentUser} />}
           {activeMenu === 'apps' && <AppRegistry currentUser={currentUser} />}

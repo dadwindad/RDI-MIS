@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { Users, Blocks, Activity, Server, ArrowUpRight, ArrowDownRight, FolderGit2, Wallet } from 'lucide-react';
 
-const Dashboard: React.FC = () => {
+const Dashboard: React.FC<{ setActiveMenu: (menu: string) => void }> = ({ setActiveMenu }) => {
   const [apps, setApps] = useState([]);
   const [projects, setProjects] = useState([]);
   const [storageFiles, setStorageFiles] = useState([]);
@@ -47,6 +47,7 @@ const Dashboard: React.FC = () => {
 
   const activeAppsCount = apps.filter(a => a.status === 'Active').length;
   const totalBudget = projects.reduce((sum, p) => sum + (p.budget_amount || 0), 0);
+  const totalBalance = projects.reduce((sum, p) => sum + (p.budget_balance || 0), 0);
   const totalStorageSize = storageFiles.reduce((sum, f) => sum + (f.size || 0), 0);
   const formatCurrency = (val: number) => new Intl.NumberFormat('th-TH', { style: 'currency', currency: 'THB' }).format(val || 0);
 
@@ -66,19 +67,7 @@ const Dashboard: React.FC = () => {
       </div>
 
       <div className="dashboard-grid">
-        <div className="card">
-          <div className="card-header">
-            <div className="card-title">Registered Sub-Apps</div>
-            <div className="card-icon"><Blocks size={24} /></div>
-          </div>
-          <div className="card-value">{apps.length > 0 ? apps.length : '...'}</div>
-          <div className="card-trend trend-up">
-            <ArrowUpRight size={16} />
-            <span>{activeAppsCount} Active Apps</span>
-          </div>
-        </div>
-
-        <div className="card">
+        <div className="card" onClick={() => setActiveMenu('org-pms')} style={{ cursor: 'pointer' }}>
           <div className="card-header">
             <div className="card-title">Total Projects (PMS)</div>
             <div className="card-icon"><FolderGit2 size={24} /></div>
@@ -90,7 +79,7 @@ const Dashboard: React.FC = () => {
           </div>
         </div>
 
-        <div className="card">
+        <div className="card" onClick={() => setActiveMenu('org-pms')} style={{ cursor: 'pointer' }}>
           <div className="card-header">
             <div className="card-title">Total Allocated Budget</div>
             <div className="card-icon"><Wallet size={24} /></div>
@@ -102,7 +91,31 @@ const Dashboard: React.FC = () => {
           </div>
         </div>
 
-        <div className="card">
+        <div className="card" onClick={() => setActiveMenu('org-pms')} style={{ cursor: 'pointer' }}>
+          <div className="card-header">
+            <div className="card-title">Remaining Budget</div>
+            <div className="card-icon"><Wallet size={24} color="var(--status-success)" /></div>
+          </div>
+          <div className="card-value" style={{ fontSize: '1.5rem' }}>{projects.length > 0 ? formatCurrency(totalBalance) : '...'}</div>
+          <div className="card-trend trend-up">
+            <ArrowUpRight size={16} />
+            <span>Available for spending</span>
+          </div>
+        </div>
+
+        <div className="card" onClick={() => setActiveMenu('apps')} style={{ cursor: 'pointer' }}>
+          <div className="card-header">
+            <div className="card-title">Registered Sub-Apps</div>
+            <div className="card-icon"><Blocks size={24} /></div>
+          </div>
+          <div className="card-value">{apps.length > 0 ? apps.length : '...'}</div>
+          <div className="card-trend trend-up">
+            <ArrowUpRight size={16} />
+            <span>{activeAppsCount} Active Apps</span>
+          </div>
+        </div>
+
+        <div className="card" onClick={() => setActiveMenu('storage')} style={{ cursor: 'pointer' }}>
           <div className="card-header">
             <div className="card-title">Storage Gateway (Used)</div>
             <div className="card-icon"><Server size={24} /></div>
