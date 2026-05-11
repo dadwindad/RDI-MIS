@@ -65,6 +65,29 @@ const ProjectDashboard = () => {
     }
   };
 
+  const handleDeleteTransaction = async (txId) => {
+    if (!window.confirm('คุณต้องการลบประวัติการเบิกจ่ายนี้ใช่หรือไม่? ยอดเงินจะถูกคืนเข้าโครงการ')) return;
+    try {
+      const res = await fetch(`http://localhost:3002/api/pms/transactions/${txId}`, {
+        method: 'DELETE',
+        headers: { 'Authorization': `Bearer ${getAuthToken()}` }
+      });
+      if (res.ok) {
+        fetchTransactions(selectedProject.id);
+        const projectsRes = await fetch('http://localhost:3002/api/pms/projects', { headers: { 'Authorization': `Bearer ${getAuthToken()}` } });
+        const allProjects = await projectsRes.json();
+        const updatedProject = allProjects.find(p => p.id === selectedProject.id);
+        setSelectedProject(updatedProject);
+        setProjects(allProjects);
+      } else {
+        alert('Failed to delete transaction');
+      }
+    } catch (e) {
+      console.error(e);
+      alert('Error: ' + e.message);
+    }
+  };
+
   const fetchFundTypes = async () => {
     try {
       const res = await fetch('http://localhost:3002/api/pms/fund-types', {
@@ -134,6 +157,7 @@ const ProjectDashboard = () => {
     
     let url = '';
     let payload = {};
+    let method = 'POST';
 
     if (type === 'ATTACH') {
       url = `http://localhost:3002/api/pms/projects/${id}/attach`;
@@ -144,11 +168,15 @@ const ProjectDashboard = () => {
     } else if (type === 'CLOSE') {
       url = `http://localhost:3002/api/pms/projects/${id}/close`;
       payload = { document_base64: data.document_base64, document_name: data.document_name, document_url: data.document_url };
+    } else if (type === 'EDIT_TRANSACTION') {
+      url = `http://localhost:3002/api/pms/transactions/${data.id}`;
+      payload = { amount: parseFloat(data.amount), description: data.description, action_date: data.action_date };
+      method = 'PUT';
     }
 
     try {
       const res = await fetch(url, {
-        method: 'POST',
+        method: method,
         headers: { 'Authorization': `Bearer ${getAuthToken()}`, 'Content-Type': 'application/json' },
         body: JSON.stringify(payload)
       });
@@ -347,6 +375,7 @@ const ProjectDashboard = () => {
                       <th style={{ padding: '0.5rem' }}>ยอดเบิก</th>
                       <th style={{ padding: '0.5rem' }}>ผู้ทำรายการ</th>
                       <th style={{ padding: '0.5rem' }}>เอกสาร</th>
+                      <th style={{ padding: '0.5rem' }}>การจัดการ</th>
                     </tr>
                   </thead>
                   <tbody>
@@ -358,6 +387,10 @@ const ProjectDashboard = () => {
                         <td style={{ padding: '0.5rem' }}><span style={{ display: 'flex', alignItems: 'center', gap: '0.25rem' }}><User size={12}/>{tx.created_by}</span></td>
                         <td style={{ padding: '0.5rem' }}>
                           {tx.document_url && renderDocumentLink(tx.document_url)}
+                        </td>
+                        <td style={{ padding: '0.5rem' }}>
+                          <button onClick={() => setActionModal({ isOpen: true, type: 'EDIT_TRANSACTION', data: tx })} style={{ background: 'transparent', border: 'none', color: 'var(--accent-color)', cursor: 'pointer', padding: '0.25rem' }} title="แก้ไข"><Edit2 size={14} /></button>
+                          <button onClick={() => handleDeleteTransaction(tx.id)} style={{ background: 'transparent', border: 'none', color: 'var(--status-danger)', cursor: 'pointer', padding: '0.25rem' }} title="ลบ"><Trash2 size={14} /></button>
                         </td>
                       </tr>
                     ))}
@@ -408,12 +441,13 @@ const ProjectDashboard = () => {
                   {actionModal.type === 'ATTACH' && 'แนบเอกสารโครงการ'}
                   {actionModal.type === 'DEDUCT' && 'ตัดยอดเบิกจ่าย'}
                   {actionModal.type === 'CLOSE' && 'ปิดโครงการ'}
+                  {actionModal.type === 'EDIT_TRANSACTION' && 'แก้ไขรายการเบิกจ่าย'}
                 </h3>
                 <button onClick={() => setActionModal({ isOpen: false, type: '', data: {} })} style={{ background: 'transparent', border: 'none', cursor: 'pointer' }}><X size={20} /></button>
               </div>
               
               <form onSubmit={handleActionSubmit} style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
-                {actionModal.type === 'DEDUCT' && (
+                {(actionModal.type === 'DEDUCT' || actionModal.type === 'EDIT_TRANSACTION') && (
                   <>
                     <div>
                       <label style={{ display: 'block', marginBottom: '0.25rem', fontSize: '0.875rem' }}>วันที่ดำเนินการ</label>
@@ -439,7 +473,7 @@ const ProjectDashboard = () => {
                 </div>
                 
                 <button type="submit" style={{ marginTop: '1rem', padding: '0.75rem', backgroundColor: actionModal.type === 'DEDUCT' ? 'var(--status-danger)' : 'var(--accent-color)', color: 'white', border: 'none', borderRadius: '0.5rem', cursor: 'pointer', fontWeight: 600 }}>
-                  ยืนยันทำรายการ
+                  {actionModal.type === 'EDIT_TRANSACTION' ? 'บันทึกการแก้ไข' : 'ยืนยันทำรายการ'}
                 </button>
               </form>
             </div>

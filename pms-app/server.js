@@ -225,6 +225,67 @@ app.get('/api/pms/projects/:id/transactions', requireAuth, (req, res) => {
   });
 });
 
+// 8.5 Update Transaction
+app.put('/api/pms/transactions/:id', requireAuth, (req, res) => {
+  const { amount, description, action_date } = req.body;
+  const { id } = req.params;
+
+  db.get("SELECT project_id, amount FROM budget_transactions WHERE id = ?", [id], (err, row) => {
+    if (err) return res.status(500).json({ error: err.message });
+    if (!row) return res.status(404).json({ error: 'Transaction not found' });
+
+    const projectId = row.project_id;
+    const oldAmount = row.amount;
+
+    db.run(
+      "UPDATE budget_transactions SET amount = ?, description = ?, action_date = ? WHERE id = ?",
+      [amount, description, action_date, id],
+      function (err2) {
+        if (err2) return res.status(500).json({ error: err2.message });
+
+        // Update project balance
+        db.run(
+          "UPDATE projects SET budget_balance = budget_balance + ? - ?, updated_at = CURRENT_TIMESTAMP WHERE id = ?",
+          [oldAmount, amount, projectId],
+          function (err3) {
+            if (err3) console.error('Failed to update project balance:', err3.message);
+            logAudit(req.coreUser?.name || 'System', 'UPDATE_TRANSACTION', `Updated transaction (${id}) for project (${projectId})`);
+            res.json({ success: true });
+          }
+        );
+      }
+    );
+  });
+});
+
+// 8.6 Delete Transaction
+app.delete('/api/pms/transactions/:id', requireAuth, (req, res) => {
+  const { id } = req.params;
+
+  db.get("SELECT project_id, amount FROM budget_transactions WHERE id = ?", [id], (err, row) => {
+    if (err) return res.status(500).json({ error: err.message });
+    if (!row) return res.status(404).json({ error: 'Transaction not found' });
+
+    const projectId = row.project_id;
+    const amount = row.amount;
+
+    db.run("DELETE FROM budget_transactions WHERE id = ?", [id], function (err2) {
+      if (err2) return res.status(500).json({ error: err2.message });
+
+      // Update project balance
+      db.run(
+        "UPDATE projects SET budget_balance = budget_balance + ?, updated_at = CURRENT_TIMESTAMP WHERE id = ?",
+        [amount, projectId],
+        function (err3) {
+          if (err3) console.error('Failed to update project balance:', err3.message);
+          logAudit(req.coreUser?.name || 'System', 'DELETE_TRANSACTION', `Deleted transaction (${id}) for project (${projectId})`);
+          res.json({ success: true });
+        }
+      );
+    });
+  });
+});
+
 // 9. Close Project (ปิดโครงการ)
 app.post('/api/pms/projects/:id/close', requireAuth, (req, res) => {
   const { document_url, document_base64, document_name } = req.body;
