@@ -1,0 +1,7 @@
+{
+  "app_id": "template-sub-app",
+  "name": "Template Sub-App",
+  "entry_url": "http://localhost:3002/remoteEntry.js",
+  "api_endpoint": "http://localhost:3002/api",
+  "required_roles": ["admin"]
+}

@@ -1,0 +1,38 @@
+# SYSTEM_RULES.md
+**Project:** Research Institute Core Platform (RICP)
+**Architecture:** Micro-Frontend & Microservices
+
+กฎในเอกสารนี้เป็น "ข้อห้าม" และ "ข้อบังคับ" ขั้นเด็ดขาดสำหรับการเขียนโค้ดในโปรเจกต์นี้ ห้ามละเมิดเด็ดขาดเพื่อรักษาความสม่ำเสมอของสถาปัตยกรรม (Architecture Consistency)
+
+## 1. System Architecture (สถาปัตยกรรมระบบ)
+- ระบบถูกแบ่งเป็น 1 Core App (Host) และ หลาย Sub-Apps (Remote/Plugins)
+- **Core App** มีหน้าที่: จัดการ IAM (SSO/JWT), Master Data (รายชื่อคน, โครงสร้างองค์กร, ปีงบประมาณ), App Registry, และเป็น API Gateway สำหรับ File Storage
+- **Sub-Apps** ถูกจัดกลุ่มตาม Business Domain (เช่น PMS, Finance, EC, IP) ไม่จัดตาม Role ผู้ใช้งาน
+- UI ของ Sub-App ต้องออกแบบให้สอดคล้องกับโครงสร้างธุรกิจแบบ **8P 5C Model** เสมอ
+
+## 2. Database & Data Modeling (กฎฐานข้อมูล)
+- **แยก Database เด็ดขาด:** แต่ละ Sub-App มี Database หรือ Schema เป็นของตัวเอง 
+- **NO Cross-Database Joins:** ห้ามทำ Foreign Key ข้าม Database (เช่น ห้าม `REFERENCES core_db.users(id)`)
+- **Reference IDs:** ให้ใช้ ID อ้างอิงแทน เช่น `core_user_id` (อ้างอิงคน) หรือ `project_id` (อ้างอิงโครงการจาก PMS)
+- **Denormalization:** อนุญาตและแนะนำให้เก็บข้อมูลสำเนา (เช่น `user_display_name`) ไว้ใน Sub-App เพื่อความเร็วในการ Query โดยไม่ต้องยิง API กลับไปถาม Core App ตลอดเวลา
+- **Soft Delete ONLY:** ห้ามใช้คำสั่ง `DELETE` ลบข้อมูลออกจากระบบเด็ดขาด ให้ใช้แนวทาง Soft Delete เช่น การเพิ่มฟิลด์ `is_deleted = true`, `deleted_at` หรือเปลี่ยนสถานะ `status = 'CANCELLED'`
+- **Fiscal Year Awareness:** ทุก Transaction หลักที่เกี่ยวกับงบประมาณหรืองานวิจัย ต้องมีฟิลด์ `fiscal_year` (ปีงบประมาณ) กำกับเสมอ และต้องตรวจสอบ State ของปีงบประมาณจาก Core App ว่า "เปิด" หรือ "ปิด" อยู่
+
+## 3. File & Storage Handling (การจัดการไฟล์)
+- ห้าม Sub-App เก็บไฟล์ไว้ในเครื่องเซิร์ฟเวอร์หรือฐานข้อมูลของตัวเองเด็ดขาด
+- ใช้ **Direct Upload (Pre-signed URL)** เสมอ: 
+  1. Frontend ของ Sub-App ขอ Pre-signed URL จาก Backend Sub-App
+  2. Backend Sub-App ไปรับ Token จาก Core Storage API
+  3. Frontend อัปโหลดไฟล์ตรงเข้า Object Storage (S3/MinIO) 
+  4. Frontend ส่ง Path กลับมาให้ Backend บันทึกลงฐานข้อมูล
+- เมื่อมีการลบข้อมูลในระบบ ห้ามลบไฟล์จริงออกจาก Object Storage ให้ทำ Soft Delete ที่ฐานข้อมูลของ Sub-App เท่านั้น
+
+## 4. Authentication & Authorization (การยืนยันตัวตนและสิทธิ)
+- การสื่อสารระหว่าง Frontend กับ Backend หรือ Backend กับ Backend ต้องแนบ **JWT (JSON Web Token)** ใน `Authorization: Bearer <token>` Header เสมอ
+- Sub-App ไม่ต้องทำระบบ Login/Logout เอง ให้ตรวจสอบ Token ที่ได้มาจาก Core App 
+- **Role-Based Access Control (RBAC):** เช็คสิทธิ (Permissions) จาก Payload ที่อยู่ใน JWT Token เพื่อตัดสินใจว่าผู้ใช้มีสิทธิทำ Action นั้นๆ ใน Sub-App หรือไม่
+
+## 5. Development Workflow & API (กฎการพัฒนา)
+- **API-First Approach:** ต้องเขียนและตกลง OpenAPI Specification (Swagger) ให้เสร็จก่อนเริ่มเขียน Logic โค้ด
+- **Idempotency:** API ที่เกี่ยวกับการเปลี่ยนสถานะ (เช่น Approve, Reject) หรือธุรกรรมการเงิน ต้องเป็น Idempotent (ยิงซ้ำผลลัพธ์ต้องเท่าเดิม ไม่เกิด Action ซ้ำซ้อน)
+- **Event-Driven:** หากต้องส่งข้อมูลข้าม Sub-App ให้ใช้วิธี Publish/Subscribe (เช่น Webhook, RabbitMQ) ห้ามยิง API ซิงค์ข้อมูลแบบ Real-time ที่จะทำให้เกิดคอขวด
