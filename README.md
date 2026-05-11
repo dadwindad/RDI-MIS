@@ -44,26 +44,29 @@ cd ..
 
 ### 2. รันระบบ
 
-**รัน Backend Server (Core):**
+**รันทุกระบบพร้อมกัน (Core + Sub-Apps):**
+```bash
+npm run start:all
+```
+(คำสั่งนี้จะรัน Core Backend, Core Frontend และ PMS Backend พร้อมกันในหน้าต่างเดียว โดยมี Prefix บอกชื่อระบบใน Log)
+
+**หรือแยกการรันทีละระบบ:**
+
+*รัน Backend Server (Core):*
 ```bash
 npm run server
 ```
-(Server จะรันที่ `http://localhost:3001`)
 
-**รัน Frontend (Core):**
-เปิด Terminal อีกหน้าต่างแล้วรัน:
+*รัน Frontend (Core):*
 ```bash
 npm run dev
 ```
-(Frontend จะรันที่ `http://localhost:5173` หรือตามที่ Vite กำหนด)
 
-**รัน Backend ของ Sub-App (PMS):**
-เปิด Terminal อีกหน้าต่างแล้วรัน:
+*รัน Backend ของ Sub-App (PMS):*
 ```bash
 cd pms-app
 npm start
 ```
-(PMS Backend จะรันที่พอร์ตที่กำหนดในโค้ด)
 
 ## ⚠️ กฎการพัฒนาที่สำคัญ (System Rules)
 โปรดศึกษาและปฏิบัติตามกฎใน `SYSTEM_RULES.md` อย่างเคร่งครัด โดยมีหัวข้อหลักดังนี้:
