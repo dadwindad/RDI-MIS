@@ -56,6 +56,10 @@ const apiDocs: EndpointGroup[] = [
       {
         method: 'GET', path: '/api/storage/files', desc: 'List all files stored in the core local storage.',
         response: '[\n  {\n    "name": "170000000-doc.pdf",\n    "size": 102400,\n    "createdAt": "2024-05-11T00:00:00.000Z"\n  }\n]'
+      },
+      {
+        method: 'DELETE', path: '/api/storage/files/:filename', desc: 'Soft-delete a file from storage.',
+        response: '{\n  "success": true,\n  "message": "File soft-deleted successfully"\n}'
       }
     ]
   }
