@@ -43,13 +43,17 @@ const UserManagement: React.FC<UserManagementProps> = ({ currentUser }) => {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    let result: { success: boolean, error?: string } = { success: false };
     if (editingUser) {
-      await db.updateUser(editingUser.id, formData);
+      result = await db.updateUser(editingUser.id, formData);
     } else {
-      await db.addUser(formData as Omit<User, 'id'>);
+      result = await db.addUser(formData as Omit<User, 'id'>);
     }
-    setShowModal(false);
-    db.getUsers().then(setUsers);
+    
+    if (result.success) {
+      setShowModal(false);
+      db.getUsers().then(setUsers);
+    }
   };
 
   const isAdmin = currentUser.role === 'admin';

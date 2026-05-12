@@ -40,7 +40,7 @@ const getHeaders = () => {
   const headers: Record<string, string> = { 'Content-Type': 'application/json' };
   const savedUser = localStorage.getItem('ricp_current_user');
   if (savedUser) {
-    headers['X-User-Name'] = JSON.parse(savedUser).name;
+    headers['X-User-Name'] = encodeURIComponent(JSON.parse(savedUser).name);
   }
   return headers;
 };
@@ -85,31 +85,35 @@ export const db = {
     }
   },
 
-  addUser: async (user: Omit<User, 'id'>): Promise<boolean> => {
+  addUser: async (user: Omit<User, 'id'>): Promise<{success: boolean, error?: string}> => {
     try {
       const res = await fetch(`${API_URL}/users`, {
         method: 'POST',
         headers: getHeaders(),
         body: JSON.stringify(user)
       });
-      return res.ok;
-    } catch (e) {
+      if (res.ok) return { success: true };
+      const data = await res.json();
+      return { success: false, error: data.error };
+    } catch (e: any) {
       console.error(e);
-      return false;
+      return { success: false, error: e.message };
     }
   },
 
-  updateUser: async (id: string, updates: Partial<User>): Promise<boolean> => {
+  updateUser: async (id: string, updates: Partial<User>): Promise<{success: boolean, error?: string}> => {
     try {
       const res = await fetch(`${API_URL}/users/${id}`, {
         method: 'PUT',
         headers: getHeaders(),
         body: JSON.stringify(updates)
       });
-      return res.ok;
-    } catch (e) {
+      if (res.ok) return { success: true };
+      const data = await res.json();
+      return { success: false, error: data.error };
+    } catch (e: any) {
       console.error(e);
-      return false;
+      return { success: false, error: e.message };
     }
   },
 

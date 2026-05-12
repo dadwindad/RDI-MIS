@@ -9,6 +9,18 @@ const app = express();
 app.use(cors());
 app.use(express.json());
 
+// Middleware to decode x-user-name header (contains Thai characters encoded as URI)
+app.use((req, res, next) => {
+  if (req.headers['x-user-name']) {
+    try {
+      req.headers['x-user-name'] = decodeURIComponent(req.headers['x-user-name']);
+    } catch (e) {
+      console.error('Failed to decode x-user-name header', e);
+    }
+  }
+  next();
+});
+
 // Ensure databases directory exists
 const dbDir = path.join(process.cwd(), 'databases');
 if (!fs.existsSync(dbDir)) {
@@ -91,6 +103,17 @@ db.serialize(() => {
       stmt.run('1002', 'manager', 'password', 'Jane Smith', 'jane.s@ricp.ac.th', 'Finance & Budgeting', 'manager', 'Active');
       stmt.run('1003', 'staff', 'password', 'Prof. Alan Turing', 'alan.t@ricp.ac.th', 'Research Institute', 'staff', 'Active');
       stmt.finalize();
+    }
+  });
+
+  // Temporary cleanup of encoded logs
+  db.run("DELETE FROM audit_logs WHERE instr(user_name, '%E0%B8') > 0", function(err) {
+    if (err) {
+      console.error("Failed to clean up logs:", err.message);
+    } else {
+      if (this.changes > 0) {
+        console.log(`Cleaned up ${this.changes} encoded log entries.`);
+      }
     }
   });
 
