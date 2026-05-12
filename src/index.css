@@ -235,6 +235,7 @@ input, button, select, textarea {
   align-items: center;
   justify-content: center;
   font-weight: 600;
+  color: #ffffff;
 }
 
 /* Content Area */

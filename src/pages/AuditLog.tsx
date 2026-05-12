@@ -74,7 +74,7 @@ const AuditLogPage: React.FC = () => {
                     {new Date(log.timestamp).toLocaleString('en-GB')}
                   </div>
                 </td>
-                <td style={{ fontWeight: 500 }}>{log.user_name}</td>
+                <td style={{ fontWeight: 500, whiteSpace: 'nowrap' }}>{log.user_name}</td>
                 <td>
                   <span style={{ 
                     backgroundColor: 'var(--bg-tertiary)', 
