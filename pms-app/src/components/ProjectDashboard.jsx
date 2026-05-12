@@ -32,7 +32,18 @@ const ProjectDashboard = () => {
 
   const getAuthToken = () => {
     let token = localStorage.getItem('core_jwt_token');
-    if (!token) {
+    const savedUser = localStorage.getItem('ricp_current_user');
+    
+    if (savedUser) {
+      const user = JSON.parse(savedUser);
+      const payload = { id: user.id, name: user.name, role: user.role };
+      const payloadStr = JSON.stringify(payload);
+      const payloadB64 = btoa(encodeURIComponent(payloadStr).replace(/%([0-9A-F]{2})/g, function(match, p1) {
+        return String.fromCharCode(parseInt(p1, 16));
+      }));
+      token = "header." + payloadB64 + ".signature";
+      localStorage.setItem('core_jwt_token', token);
+    } else if (!token) {
       const mockPayload = { id: 1, name: 'Admin Officer', role: 'admin' };
       token = "header." + btoa(JSON.stringify(mockPayload)) + ".signature";
       localStorage.setItem('core_jwt_token', token);
