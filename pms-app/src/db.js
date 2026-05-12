@@ -22,13 +22,17 @@ db.serialize(() => {
     is_ec_approved INTEGER DEFAULT 0,
     is_deleted INTEGER DEFAULT 0,
     created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
-    updated_at DATETIME DEFAULT CURRENT_TIMESTAMP
+    updated_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+    manager_name TEXT,
+    staff_name TEXT
   )`);
 
   db.run(`ALTER TABLE projects ADD COLUMN budget_amount REAL DEFAULT 0`, (err) => { });
   db.run(`ALTER TABLE projects ADD COLUMN budget_balance REAL DEFAULT 0`, (err) => { });
   db.run(`ALTER TABLE projects ADD COLUMN proposal_doc_url TEXT`, (err) => { });
   db.run(`ALTER TABLE projects ADD COLUMN closure_doc_url TEXT`, (err) => { });
+  db.run(`ALTER TABLE projects ADD COLUMN manager_name TEXT`, (err) => { });
+  db.run(`ALTER TABLE projects ADD COLUMN staff_name TEXT`, (err) => { });
 
   // Budget Transactions Table
   db.run(`CREATE TABLE IF NOT EXISTS budget_transactions (

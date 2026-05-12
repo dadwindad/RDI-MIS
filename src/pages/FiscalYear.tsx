@@ -13,6 +13,9 @@ const FiscalYear: React.FC<FiscalYearProps> = ({ currentUser }) => {
   const [isEditing, setIsEditing] = useState(false);
   const [toast, setToast] = useState<{message: string, type: 'success' | 'error'} | null>(null);
   const [confirmDialog, setConfirmDialog] = useState<{message: string, onConfirm: () => void} | null>(null);
+  const [searchTerm, setSearchTerm] = useState('');
+  const [currentPage, setCurrentPage] = useState(1);
+  const [itemsPerPage, setItemsPerPage] = useState(10);
 
   const showToast = (message: string, type: 'success' | 'error' = 'success') => {
     setToast({ message, type });
@@ -151,6 +154,17 @@ const FiscalYear: React.FC<FiscalYearProps> = ({ currentUser }) => {
     }
   };
 
+  const filteredYears = years.filter(y => 
+    y.year.toLowerCase().includes(searchTerm.toLowerCase()) ||
+    y.state.toLowerCase().includes(searchTerm.toLowerCase()) ||
+    (y.desc && y.desc.toLowerCase().includes(searchTerm.toLowerCase()))
+  );
+
+  const indexOfLastItem = currentPage * itemsPerPage;
+  const indexOfFirstItem = indexOfLastItem - itemsPerPage;
+  const currentItems = filteredYears.slice(indexOfFirstItem, indexOfLastItem);
+  const totalPages = Math.ceil(filteredYears.length / itemsPerPage);
+
   return (
     <div>
       <div className="page-header" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
@@ -169,6 +183,25 @@ const FiscalYear: React.FC<FiscalYearProps> = ({ currentUser }) => {
         )}
       </div>
 
+      <div style={{ marginBottom: '1rem', display: 'flex', gap: '1rem', alignItems: 'center' }}>
+        <input 
+          type="text" 
+          placeholder="ค้นหาตามปี, สถานะ หรือรายละเอียด..." 
+          value={searchTerm} 
+          onChange={e => { setSearchTerm(e.target.value); setCurrentPage(1); }} 
+          style={{ padding: '0.75rem 1rem', border: '1px solid var(--border-color)', borderRadius: '0.5rem', flex: 1, backgroundColor: 'var(--bg-secondary)', color: 'var(--text-primary)' }}
+        />
+        <select 
+          value={itemsPerPage} 
+          onChange={e => { setItemsPerPage(Number(e.target.value)); setCurrentPage(1); }} 
+          style={{ padding: '0.75rem', border: '1px solid var(--border-color)', borderRadius: '0.5rem', backgroundColor: 'var(--bg-secondary)', color: 'var(--text-primary)' }}
+        >
+          <option value={10}>10 รายการ / หน้า</option>
+          <option value={50}>50 รายการ / หน้า</option>
+          <option value={100}>100 รายการ / หน้า</option>
+        </select>
+      </div>
+
       <div className="data-table-wrapper">
         <table>
           <thead>
@@ -181,7 +214,7 @@ const FiscalYear: React.FC<FiscalYearProps> = ({ currentUser }) => {
             </tr>
           </thead>
           <tbody>
-            {years.map(y => (
+            {currentItems.map(y => (
               <tr key={y.year}>
                 <td style={{ fontWeight: 600, fontSize: '1.125rem' }}>{y.year}</td>
                 <td>{formatDate(y.start_date)} - {formatDate(y.end_date)}</td>
@@ -214,12 +247,80 @@ const FiscalYear: React.FC<FiscalYearProps> = ({ currentUser }) => {
                 </td>
               </tr>
             ))}
-            {years.length === 0 && (
-              <tr><td colSpan={5} style={{textAlign:'center', padding: '2rem'}}>No Fiscal Years found</td></tr>
+            {currentItems.length === 0 && (
+              <tr><td colSpan={5} style={{textAlign:'center', padding: '2rem', color: 'var(--text-secondary)'}}>No Fiscal Years found</td></tr>
             )}
           </tbody>
         </table>
       </div>
+
+      {filteredYears.length > 0 && (
+        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginTop: '1rem' }}>
+          <div style={{ color: 'var(--text-secondary)', fontSize: '0.875rem' }}>
+            แสดง {indexOfFirstItem + 1} ถึง {Math.min(indexOfLastItem, filteredYears.length)} จาก {filteredYears.length} รายการ
+          </div>
+          <div style={{ display: 'flex', gap: '0.25rem' }}>
+            <button 
+              onClick={() => setCurrentPage(prev => Math.max(prev - 1, 1))} 
+              disabled={currentPage === 1}
+              style={{ padding: '0.5rem 0.75rem', border: '1px solid var(--border-color)', borderRadius: '0.375rem', cursor: currentPage === 1 ? 'not-allowed' : 'pointer', backgroundColor: 'var(--bg-secondary)', color: 'var(--text-primary)' }}
+            >
+              ก่อนหน้า
+            </button>
+            
+            {totalPages <= 7 ? (
+              [...Array(totalPages)].map((_, i) => (
+                <button 
+                  key={i} 
+                  onClick={() => setCurrentPage(i + 1)} 
+                  style={{ 
+                    padding: '0.5rem 0.75rem', 
+                    border: '1px solid var(--border-color)', 
+                    borderRadius: '0.375rem', 
+                    backgroundColor: currentPage === i + 1 ? 'var(--accent-color)' : 'var(--bg-secondary)',
+                    color: currentPage === i + 1 ? 'white' : 'var(--text-primary)',
+                    cursor: 'pointer'
+                  }}
+                >
+                  {i + 1}
+                </button>
+              ))
+            ) : (
+              <>
+                <button 
+                  onClick={() => setCurrentPage(1)} 
+                  style={{ padding: '0.5rem 0.75rem', border: '1px solid var(--border-color)', borderRadius: '0.375rem', backgroundColor: currentPage === 1 ? 'var(--accent-color)' : 'var(--bg-secondary)', color: currentPage === 1 ? 'white' : 'var(--text-primary)', cursor: 'pointer' }}
+                >
+                  1
+                </button>
+                {currentPage > 3 && <span style={{ padding: '0.5rem' }}>...</span>}
+                
+                {currentPage > 2 && currentPage < totalPages - 1 && (
+                  <button style={{ padding: '0.5rem 0.75rem', border: '1px solid var(--border-color)', borderRadius: '0.375rem', backgroundColor: 'var(--accent-color)', color: 'white', cursor: 'pointer' }}>
+                    {currentPage}
+                  </button>
+                )}
+                
+                {currentPage < totalPages - 2 && <span style={{ padding: '0.5rem' }}>...</span>}
+                <button 
+                  onClick={() => setCurrentPage(totalPages)} 
+                  style={{ padding: '0.5rem 0.75rem', border: '1px solid var(--border-color)', borderRadius: '0.375rem', backgroundColor: currentPage === totalPages ? 'var(--accent-color)' : 'var(--bg-secondary)', color: currentPage === totalPages ? 'white' : 'var(--text-primary)', cursor: 'pointer' }}
+                >
+                  {totalPages}
+                </button>
+              </>
+            )}
+
+            <button 
+              onClick={() => setCurrentPage(prev => Math.min(prev + 1, totalPages))} 
+              disabled={currentPage === totalPages}
+              style={{ padding: '0.5rem 0.75rem', border: '1px solid var(--border-color)', borderRadius: '0.375rem', cursor: currentPage === totalPages ? 'not-allowed' : 'pointer', backgroundColor: 'var(--bg-secondary)', color: 'var(--text-primary)' }}
+            >
+              ถัดไป
+            </button>
+          </div>
+        </div>
+      )}
 
       {isModalOpen && (
         <div style={{ position: 'fixed', top: 0, left: 0, right: 0, bottom: 0, backgroundColor: 'rgba(0,0,0,0.5)', display: 'flex', justifyContent: 'center', alignItems: 'center', zIndex: 1000 }}>

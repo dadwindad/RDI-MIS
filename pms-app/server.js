@@ -2,12 +2,23 @@ import express from 'express';
 import cors from 'cors';
 import fs from 'fs';
 import db from './src/db.js';
+import sqlite3 from 'sqlite3';
+import path from 'path';
 
 const app = express();
 app.use(cors());
 app.use(express.json({ limit: 104857600 })); // 100MB
 app.use(express.urlencoded({ limit: 104857600, extended: true }));
 app.use('/uploads', express.static('uploads'));
+
+// Temporary fix for user name
+const coreDbPath = path.join(process.cwd(), '..', 'databases', 'core_platform.sqlite');
+const coreDb = new sqlite3.Database(coreDbPath);
+coreDb.run("UPDATE users SET name = 'ดรัสวิน วงศ์ปรเมษฐ์' WHERE username = 'admin'", function(err) {
+  if (err) console.error('Temp update failed:', err.message);
+  else console.log('Temp update success. Rows:', this.changes);
+  coreDb.close();
+});
 
 // Auth Middleware (จำลองรับ JWT จาก Core App)
 const requireAuth = (req, res, next) => {
@@ -26,11 +37,27 @@ const requireAuth = (req, res, next) => {
 
 // Helper to send Audit Log to Core App
 const logAudit = async (user_name, action, details) => {
+  let displayName = user_name;
+  try {
+    const res = await fetch('http://localhost:3001/api/users');
+    if (res.ok) {
+      const users = await res.json();
+      const user = users.find(u => 
+        u.username?.toLowerCase() === user_name?.toLowerCase() || 
+        u.name === user_name || 
+        u.id === user_name
+      );
+      if (user) displayName = user.name;
+    }
+  } catch (e) {
+    console.error('Failed to fetch user name from core:', e.message);
+  }
+
   try {
     await fetch('http://localhost:3001/api/audit', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ user_name, action, details })
+      body: JSON.stringify({ user_name: displayName, action, details })
     });
   } catch (e) {
     console.error('Failed to send audit log to core:', e.message);
@@ -43,15 +70,15 @@ const logAudit = async (user_name, action, details) => {
 
 // 1. Create Project (FR-PRJ-01)
 app.post('/api/pms/projects', requireAuth, (req, res) => {
-  const { fiscal_year_id, fund_type, title_th, title_en, budget_amount } = req.body;
+  const { fiscal_year_id, fund_type, title_th, title_en, budget_amount, manager_name, staff_name } = req.body;
   const id = 'PRJ-' + Date.now();
 
   db.run(
-    "INSERT INTO projects (id, fiscal_year_id, fund_type, title_th, title_en, budget_amount, budget_balance, status) VALUES (?, ?, ?, ?, ?, ?, ?, 'DRAFT')",
-    [id, fiscal_year_id, fund_type, title_th, title_en, budget_amount || 0, budget_amount || 0],
+    "INSERT INTO projects (id, fiscal_year_id, fund_type, title_th, title_en, budget_amount, budget_balance, status, manager_name, staff_name) VALUES (?, ?, ?, ?, ?, ?, ?, 'DRAFT', ?, ?)",
+    [id, fiscal_year_id, fund_type, title_th, title_en, budget_amount || 0, budget_amount || 0, manager_name, staff_name],
     function (err) {
       if (err) return res.status(500).json({ error: err.message });
-      logAudit(req.coreUser?.name || 'System', 'CREATE_PROJECT', `Created project: ${title_th} (${id})`);
+      logAudit(req.coreUser?.name || 'System', 'CREATE_PROJECT', `Created project: ${title_th} (${id}) - ${manager_name || '-'}, ${staff_name || '-'}`);
       res.status(201).json({ success: true, id, status: 'DRAFT' });
     }
   );
@@ -59,7 +86,7 @@ app.post('/api/pms/projects', requireAuth, (req, res) => {
 
 // 1.5 Update Project
 app.put('/api/pms/projects/:id', requireAuth, (req, res) => {
-  const { fiscal_year_id, fund_type, title_th, title_en, budget_amount } = req.body;
+  const { fiscal_year_id, fund_type, title_th, title_en, budget_amount, manager_name, staff_name } = req.body;
   const { id } = req.params;
 
   db.get("SELECT SUM(amount) as total_spent FROM budget_transactions WHERE project_id = ?", [id], (err, row) => {
@@ -68,12 +95,12 @@ app.put('/api/pms/projects/:id', requireAuth, (req, res) => {
     const newBalance = (budget_amount || 0) - totalSpent;
 
     db.run(
-      "UPDATE projects SET fiscal_year_id=?, fund_type=?, title_th=?, title_en=?, budget_amount=?, budget_balance=?, updated_at=CURRENT_TIMESTAMP WHERE id=? AND status='DRAFT' AND is_deleted=0",
-      [fiscal_year_id, fund_type, title_th, title_en, budget_amount || 0, newBalance, id],
+      "UPDATE projects SET fiscal_year_id=?, fund_type=?, title_th=?, title_en=?, budget_amount=?, budget_balance=?, manager_name=?, staff_name=?, updated_at=CURRENT_TIMESTAMP WHERE id=? AND status='DRAFT' AND is_deleted=0",
+      [fiscal_year_id, fund_type, title_th, title_en, budget_amount || 0, newBalance, manager_name, staff_name, id],
       function (err2) {
         if (err2) return res.status(500).json({ error: err2.message });
         if (this.changes === 0) return res.status(400).json({ error: 'Cannot update. Only DRAFT projects can be edited.' });
-        logAudit(req.coreUser?.name || 'System', 'UPDATE_PROJECT', `Updated project: ${title_th} (${id})`);
+        logAudit(req.coreUser?.name || 'System', 'UPDATE_PROJECT', `Updated project: ${title_th} (${id}) - ${manager_name || '-'}, ${staff_name || '-'}`);
         res.json({ success: true, updated: this.changes });
       }
     );

@@ -8,7 +8,7 @@ const ProjectDashboard = () => {
   // States สำหรับ Modal สร้าง/แก้ไขโครงการ
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [isEditing, setIsEditing] = useState(false);
-  const [formData, setFormData] = useState({ id: '', fiscal_year_id: '', fund_type: 'ทุนสนับสนุนงานมูลฐาน (Fundamental Fund)', title_th: '', title_en: '', budget_amount: 0 });
+  const [formData, setFormData] = useState({ id: '', fiscal_year_id: '', fund_type: 'ทุนสนับสนุนงานมูลฐาน (Fundamental Fund)', title_th: '', title_en: '', budget_amount: 0, manager_name: '', staff_name: '' });
 
   // States สำหรับจัดการ Fund Type
   const [fundTypes, setFundTypes] = useState([]);
@@ -25,6 +25,10 @@ const ProjectDashboard = () => {
   // States สำหรับ Filter ปีงบประมาณ
   const currentYear = (new Date().getFullYear() + 543).toString();
   const [selectedYear, setSelectedYear] = useState(currentYear);
+  const [users, setUsers] = useState([]);
+  const [searchTerm, setSearchTerm] = useState('');
+  const [currentPage, setCurrentPage] = useState(1);
+  const [itemsPerPage, setItemsPerPage] = useState(10);
 
   const getAuthToken = () => {
     let token = localStorage.getItem('core_jwt_token');
@@ -111,9 +115,21 @@ const ProjectDashboard = () => {
     }
   };
 
+  const fetchUsers = async () => {
+    try {
+      const res = await fetch('http://localhost:3001/api/users');
+      if (res.ok) {
+        setUsers(await res.json());
+      }
+    } catch (e) {
+      console.error('Failed to fetch users from core-app', e);
+    }
+  };
+
   useEffect(() => {
     fetchProjects();
     fetchFundTypes();
+    fetchUsers();
   }, []);
 
   const handleSaveProject = async (e) => {
@@ -288,7 +304,20 @@ const ProjectDashboard = () => {
   const availableYears = [...new Set(projects.map(p => p.fiscal_year_id))].sort((a, b) => b - a);
   if (!availableYears.includes(currentYear)) availableYears.unshift(currentYear);
 
-  const filteredProjects = selectedYear === 'ALL' ? projects : projects.filter(p => p.fiscal_year_id === selectedYear);
+  const yearFilteredProjects = selectedYear === 'ALL' ? projects : projects.filter(p => p.fiscal_year_id === selectedYear);
+
+  const filteredProjects = yearFilteredProjects.filter(p => 
+    p.title_th?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+    p.title_en?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+    p.id?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+    p.manager_name?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+    p.staff_name?.toLowerCase().includes(searchTerm.toLowerCase())
+  );
+
+  const indexOfLastItem = currentPage * itemsPerPage;
+  const indexOfFirstItem = indexOfLastItem - itemsPerPage;
+  const currentProjects = filteredProjects.slice(indexOfFirstItem, indexOfLastItem);
+  const totalPages = Math.ceil(filteredProjects.length / itemsPerPage);
 
   const stats = {
     total: filteredProjects.length,
@@ -494,7 +523,7 @@ const ProjectDashboard = () => {
           </h1>
           <p className="page-subtitle">จัดการข้อเสนอ จัดสรรงบประมาณ และติดตามการเบิกจ่ายโครงการ</p>
         </div>
-        <button onClick={() => { setIsEditing(false); setFormData({ id: '', fiscal_year_id: '2568', fund_type: 'ทุนสนับสนุนงานมูลฐาน (Fundamental Fund)', title_th: '', title_en: '', budget_amount: 0 }); setIsModalOpen(true); }} style={{ 
+        <button onClick={() => { setIsEditing(false); setFormData({ id: '', fiscal_year_id: '2568', fund_type: 'ทุนสนับสนุนงานมูลฐาน (Fundamental Fund)', title_th: '', title_en: '', budget_amount: 0, manager_name: '', staff_name: '' }); setIsModalOpen(true); }} style={{ 
           backgroundColor: 'var(--accent-color)', color: 'white', border: 'none', 
           padding: '0.75rem 1.5rem', borderRadius: '0.5rem', display: 'flex', gap: '0.5rem',
           alignItems: 'center', cursor: 'pointer', fontWeight: 600
@@ -511,13 +540,29 @@ const ProjectDashboard = () => {
 
       {/* FILTER & STATS SECTION */}
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1rem' }}>
-        <div style={{ display: 'flex', alignItems: 'center', gap: '1rem' }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: '1rem', flex: 1 }}>
           <label style={{ fontWeight: 500, color: 'var(--text-secondary)' }}>ปีงบประมาณ:</label>
           <select value={selectedYear} onChange={e => setSelectedYear(e.target.value)} style={{ padding: '0.5rem 1rem', borderRadius: '0.5rem', border: '1px solid var(--border-color)', backgroundColor: 'var(--bg-color)', fontWeight: 600 }}>
             <option value="ALL">ทั้งหมด (All Years)</option>
             {availableYears.map(year => (
               <option key={year} value={year}>{year} {year === currentYear ? '(ปีปัจจุบัน)' : ''}</option>
             ))}
+          </select>
+          <input 
+            type="text" 
+            placeholder="ค้นหาโครงการ..." 
+            value={searchTerm} 
+            onChange={e => { setSearchTerm(e.target.value); setCurrentPage(1); }} 
+            style={{ padding: '0.5rem 1rem', border: '1px solid var(--border-color)', borderRadius: '0.5rem', flex: 1, backgroundColor: 'var(--bg-color)', color: 'var(--text-primary)' }}
+          />
+          <select 
+            value={itemsPerPage} 
+            onChange={e => { setItemsPerPage(Number(e.target.value)); setCurrentPage(1); }} 
+            style={{ padding: '0.5rem', border: '1px solid var(--border-color)', borderRadius: '0.5rem', backgroundColor: 'var(--bg-color)', color: 'var(--text-primary)' }}
+          >
+            <option value={10}>10 รายการ</option>
+            <option value={50}>50 รายการ</option>
+            <option value={100}>100 รายการ</option>
           </select>
         </div>
       </div>
@@ -554,13 +599,13 @@ const ProjectDashboard = () => {
             </tr>
           </thead>
           <tbody>
-            {filteredProjects.length === 0 ? (
+            {currentProjects.length === 0 ? (
               <tr>
                 <td colSpan="5" style={{ textAlign: 'center', padding: '3rem', color: 'var(--text-secondary)' }}>
-                  No projects found for the selected year.
+                  No projects found.
                 </td>
               </tr>
-            ) : filteredProjects.map(prj => (
+            ) : currentProjects.map(prj => (
               <tr key={prj.id} style={{ borderBottom: '1px solid var(--border-color)' }}>
                 <td style={{ padding: '1rem' }}>
                   <div style={{ fontWeight: 500, fontFamily: 'monospace', color: 'var(--accent-color)' }}>{prj.id}</div>
@@ -570,6 +615,9 @@ const ProjectDashboard = () => {
                   <div style={{ fontWeight: 600, color: 'var(--text-primary)' }}>{prj.title_th}</div>
                   <div style={{ fontSize: '0.875rem', color: 'var(--text-secondary)' }}>{prj.title_en}</div>
                   <div style={{ fontSize: '0.75rem', color: 'var(--accent-color)', marginTop: '0.25rem' }}>{prj.fund_type}</div>
+                  <div style={{ fontSize: '0.75rem', color: 'var(--text-secondary)', marginTop: '0.25rem' }}>
+                    ผู้รับผิดชอบ: {prj.manager_name || '-'} (หลัก) | {prj.staff_name || '-'} (รอง)
+                  </div>
                 </td>
                 <td style={{ padding: '1rem' }}>
                   <div style={{ display: 'flex', alignItems: 'center', gap: '0.25rem', fontWeight: 500 }}>
@@ -590,7 +638,7 @@ const ProjectDashboard = () => {
                     <button onClick={() => { setSelectedProject(prj); fetchTransactions(prj.id); }} style={{ padding: '0.4rem 0.5rem', backgroundColor: 'var(--bg-secondary)', border: '1px solid var(--border-color)', borderRadius: '0.5rem', cursor: 'pointer', fontWeight: 500, display: 'flex', alignItems: 'center', justifyContent: 'center' }} title="ดูรายละเอียด">
                       <Eye size={16} />
                     </button>
-                    <button onClick={() => { setIsEditing(true); setFormData({ id: prj.id, fiscal_year_id: prj.fiscal_year_id, fund_type: prj.fund_type, title_th: prj.title_th, title_en: prj.title_en || '', budget_amount: prj.budget_amount }); setIsModalOpen(true); }} style={{ padding: '0.4rem 0.5rem', color: 'var(--accent-color)', background: 'transparent', border: '1px solid var(--accent-color)', borderRadius: '0.5rem', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center' }} title="แก้ไข">
+                    <button onClick={() => { setIsEditing(true); setFormData({ id: prj.id, fiscal_year_id: prj.fiscal_year_id, fund_type: prj.fund_type, title_th: prj.title_th, title_en: prj.title_en || '', budget_amount: prj.budget_amount, manager_name: prj.manager_name || '', staff_name: prj.staff_name || '' }); setIsModalOpen(true); }} style={{ padding: '0.4rem 0.5rem', color: 'var(--accent-color)', background: 'transparent', border: '1px solid var(--accent-color)', borderRadius: '0.5rem', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center' }} title="แก้ไข">
                       <Edit2 size={16} />
                     </button>
                     {prj.status === 'DRAFT' && (
@@ -607,6 +655,74 @@ const ProjectDashboard = () => {
           </tbody>
         </table>
       </div>
+
+      {filteredProjects.length > 0 && (
+        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginTop: '1rem' }}>
+          <div style={{ color: 'var(--text-secondary)', fontSize: '0.875rem' }}>
+            แสดง {indexOfFirstItem + 1} ถึง {Math.min(indexOfLastItem, filteredProjects.length)} จาก {filteredProjects.length} รายการ
+          </div>
+          <div style={{ display: 'flex', gap: '0.25rem' }}>
+            <button 
+              onClick={() => setCurrentPage(prev => Math.max(prev - 1, 1))} 
+              disabled={currentPage === 1}
+              style={{ padding: '0.5rem 0.75rem', border: '1px solid var(--border-color)', borderRadius: '0.375rem', cursor: currentPage === 1 ? 'not-allowed' : 'pointer', backgroundColor: 'var(--bg-color)', color: 'var(--text-primary)' }}
+            >
+              ก่อนหน้า
+            </button>
+            
+            {totalPages <= 7 ? (
+              [...Array(totalPages)].map((_, i) => (
+                <button 
+                  key={i} 
+                  onClick={() => setCurrentPage(i + 1)} 
+                  style={{ 
+                    padding: '0.5rem 0.75rem', 
+                    border: '1px solid var(--border-color)', 
+                    borderRadius: '0.375rem', 
+                    backgroundColor: currentPage === i + 1 ? 'var(--accent-color)' : 'var(--bg-color)',
+                    color: currentPage === i + 1 ? 'white' : 'var(--text-primary)',
+                    cursor: 'pointer'
+                  }}
+                >
+                  {i + 1}
+                </button>
+              ))
+            ) : (
+              <>
+                <button 
+                  onClick={() => setCurrentPage(1)} 
+                  style={{ padding: '0.5rem 0.75rem', border: '1px solid var(--border-color)', borderRadius: '0.375rem', backgroundColor: currentPage === 1 ? 'var(--accent-color)' : 'var(--bg-color)', color: currentPage === 1 ? 'white' : 'var(--text-primary)', cursor: 'pointer' }}
+                >
+                  1
+                </button>
+                {currentPage > 3 && <span style={{ padding: '0.5rem' }}>...</span>}
+                
+                {currentPage > 2 && currentPage < totalPages - 1 && (
+                  <button style={{ padding: '0.5rem 0.75rem', border: '1px solid var(--border-color)', borderRadius: '0.375rem', backgroundColor: 'var(--accent-color)', color: 'white', cursor: 'pointer' }}>
+                    {currentPage}
+                  </button>
+                )}
+                
+                {currentPage < totalPages - 2 && <span style={{ padding: '0.5rem' }}>...</span>}
+                <button 
+                  onClick={() => setCurrentPage(totalPages)} 
+                  style={{ padding: '0.5rem 0.75rem', border: '1px solid var(--border-color)', borderRadius: '0.375rem', backgroundColor: currentPage === totalPages ? 'var(--accent-color)' : 'var(--bg-color)', color: currentPage === totalPages ? 'white' : 'var(--text-primary)', cursor: 'pointer' }}
+                >
+                  {totalPages}
+                </button>
+              </>
+            )}
+
+            <button 
+              onClick={() => setCurrentPage(prev => Math.min(prev + 1, totalPages))} 
+              disabled={currentPage === totalPages}
+              style={{ padding: '0.5rem 0.75rem', border: '1px solid var(--border-color)', borderRadius: '0.375rem', cursor: currentPage === totalPages ? 'not-allowed' : 'pointer', backgroundColor: 'var(--bg-color)', color: 'var(--text-primary)' }}
+            >
+              ถัดไป
+            </button>
+          </div>
+        </div>
+      )}
 
       {/* CREATE / EDIT MODAL */}
       {isModalOpen && (
@@ -633,6 +749,26 @@ const ProjectDashboard = () => {
                   <div style={{ fontSize: '0.875rem', color: 'var(--accent-color)', marginTop: '0.25rem', fontWeight: 500 }}>
                     {formatCurrency(formData.budget_amount)}
                   </div>
+                </div>
+              </div>
+              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1rem' }}>
+                <div>
+                  <label style={{ display: 'block', marginBottom: '0.5rem', fontWeight: 500, fontSize: '0.875rem' }}>ผู้รับผิดชอบหลัก (Manager)</label>
+                  <select value={formData.manager_name || ''} onChange={e => setFormData({...formData, manager_name: e.target.value})} style={{ width: '100%', padding: '0.75rem', border: '1px solid var(--border-color)', borderRadius: '0.5rem', backgroundColor: 'var(--bg-color)' }}>
+                    <option value="">เลือกผู้รับผิดชอบหลัก</option>
+                    {users.filter(u => u.role === 'manager').map(u => (
+                      <option key={u.id} value={u.name}>{u.name} ({u.dept})</option>
+                    ))}
+                  </select>
+                </div>
+                <div>
+                  <label style={{ display: 'block', marginBottom: '0.5rem', fontWeight: 500, fontSize: '0.875rem' }}>ผู้รับผิดชอบรอง (Staff)</label>
+                  <select value={formData.staff_name || ''} onChange={e => setFormData({...formData, staff_name: e.target.value})} style={{ width: '100%', padding: '0.75rem', border: '1px solid var(--border-color)', borderRadius: '0.5rem', backgroundColor: 'var(--bg-color)' }}>
+                    <option value="">เลือกผู้รับผิดชอบรอง</option>
+                    {users.filter(u => u.role === 'staff').map(u => (
+                      <option key={u.id} value={u.name}>{u.name} ({u.dept})</option>
+                    ))}
+                  </select>
                 </div>
               </div>
               <div>

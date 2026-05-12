@@ -21,6 +21,9 @@ interface FileData {
 const StorageGateway: React.FC<StorageGatewayProps> = ({ currentUser }) => {
   const [files, setFiles] = useState<FileData[]>([]);
   const [isUploading, setIsUploading] = useState(false);
+  const [searchTerm, setSearchTerm] = useState('');
+  const [currentPage, setCurrentPage] = useState(1);
+  const [itemsPerPage, setItemsPerPage] = useState(10);
 
   const fetchFiles = async () => {
     try {
@@ -78,8 +81,6 @@ const StorageGateway: React.FC<StorageGatewayProps> = ({ currentUser }) => {
     }
   };
 
-
-
   const formatBytes = (bytes: number) => {
     if (bytes === 0) return '0 Bytes';
     const k = 1024;
@@ -87,6 +88,18 @@ const StorageGateway: React.FC<StorageGatewayProps> = ({ currentUser }) => {
     const i = Math.floor(Math.log(bytes) / Math.log(k));
     return parseFloat((bytes / Math.pow(k, i)).toFixed(2)) + ' ' + sizes[i];
   };
+
+  const filteredFiles = files.filter(file => 
+    file.displayName.toLowerCase().includes(searchTerm.toLowerCase()) ||
+    file.appSource.toLowerCase().includes(searchTerm.toLowerCase()) ||
+    (file.activity && file.activity.toLowerCase().includes(searchTerm.toLowerCase())) ||
+    file.uploader.toLowerCase().includes(searchTerm.toLowerCase())
+  );
+
+  const indexOfLastItem = currentPage * itemsPerPage;
+  const indexOfFirstItem = indexOfLastItem - itemsPerPage;
+  const currentItems = filteredFiles.slice(indexOfFirstItem, indexOfLastItem);
+  const totalPages = Math.ceil(filteredFiles.length / itemsPerPage);
 
   return (
     <div>
@@ -145,6 +158,25 @@ const StorageGateway: React.FC<StorageGatewayProps> = ({ currentUser }) => {
         </div>
       </div>
 
+      <div style={{ marginBottom: '1rem', display: 'flex', gap: '1rem', alignItems: 'center' }}>
+        <input 
+          type="text" 
+          placeholder="ค้นหาตามชื่อไฟล์, แหล่งที่มา, กิจกรรม หรือผู้อัปโหลด..." 
+          value={searchTerm} 
+          onChange={e => { setSearchTerm(e.target.value); setCurrentPage(1); }} 
+          style={{ padding: '0.75rem 1rem', border: '1px solid var(--border-color)', borderRadius: '0.5rem', flex: 1, backgroundColor: 'var(--bg-secondary)', color: 'var(--text-primary)' }}
+        />
+        <select 
+          value={itemsPerPage} 
+          onChange={e => { setItemsPerPage(Number(e.target.value)); setCurrentPage(1); }} 
+          style={{ padding: '0.75rem', border: '1px solid var(--border-color)', borderRadius: '0.5rem', backgroundColor: 'var(--bg-secondary)', color: 'var(--text-primary)' }}
+        >
+          <option value={10}>10 รายการ / หน้า</option>
+          <option value={50}>50 รายการ / หน้า</option>
+          <option value={100}>100 รายการ / หน้า</option>
+        </select>
+      </div>
+
       <div className="data-table-wrapper">
         <table>
           <thead>
@@ -158,7 +190,7 @@ const StorageGateway: React.FC<StorageGatewayProps> = ({ currentUser }) => {
             </tr>
           </thead>
           <tbody>
-            {files.map(file => (
+            {currentItems.map(file => (
               <tr key={file.filename} style={{ opacity: file.isDeleted ? 0.6 : 1, backgroundColor: file.isDeleted ? 'var(--bg-tertiary)' : 'transparent' }}>
                 <td>
                   <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
@@ -178,16 +210,84 @@ const StorageGateway: React.FC<StorageGatewayProps> = ({ currentUser }) => {
                 </td>
               </tr>
             ))}
-            {files.length === 0 && (
+            {currentItems.length === 0 && (
               <tr>
                 <td colSpan={6} style={{ textAlign: 'center', padding: '2rem', color: 'var(--text-secondary)' }}>
-                  No files uploaded to the local storage yet.
+                  No files found.
                 </td>
               </tr>
             )}
           </tbody>
         </table>
       </div>
+
+      {filteredFiles.length > 0 && (
+        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginTop: '1rem' }}>
+          <div style={{ color: 'var(--text-secondary)', fontSize: '0.875rem' }}>
+            แสดง {indexOfFirstItem + 1} ถึง {Math.min(indexOfLastItem, filteredFiles.length)} จาก {filteredFiles.length} รายการ
+          </div>
+          <div style={{ display: 'flex', gap: '0.25rem' }}>
+            <button 
+              onClick={() => setCurrentPage(prev => Math.max(prev - 1, 1))} 
+              disabled={currentPage === 1}
+              style={{ padding: '0.5rem 0.75rem', border: '1px solid var(--border-color)', borderRadius: '0.375rem', cursor: currentPage === 1 ? 'not-allowed' : 'pointer', backgroundColor: 'var(--bg-secondary)', color: 'var(--text-primary)' }}
+            >
+              ก่อนหน้า
+            </button>
+            
+            {totalPages <= 7 ? (
+              [...Array(totalPages)].map((_, i) => (
+                <button 
+                  key={i} 
+                  onClick={() => setCurrentPage(i + 1)} 
+                  style={{ 
+                    padding: '0.5rem 0.75rem', 
+                    border: '1px solid var(--border-color)', 
+                    borderRadius: '0.375rem', 
+                    backgroundColor: currentPage === i + 1 ? 'var(--accent-color)' : 'var(--bg-secondary)',
+                    color: currentPage === i + 1 ? 'white' : 'var(--text-primary)',
+                    cursor: 'pointer'
+                  }}
+                >
+                  {i + 1}
+                </button>
+              ))
+            ) : (
+              <>
+                <button 
+                  onClick={() => setCurrentPage(1)} 
+                  style={{ padding: '0.5rem 0.75rem', border: '1px solid var(--border-color)', borderRadius: '0.375rem', backgroundColor: currentPage === 1 ? 'var(--accent-color)' : 'var(--bg-secondary)', color: currentPage === 1 ? 'white' : 'var(--text-primary)', cursor: 'pointer' }}
+                >
+                  1
+                </button>
+                {currentPage > 3 && <span style={{ padding: '0.5rem' }}>...</span>}
+                
+                {currentPage > 2 && currentPage < totalPages - 1 && (
+                  <button style={{ padding: '0.5rem 0.75rem', border: '1px solid var(--border-color)', borderRadius: '0.375rem', backgroundColor: 'var(--accent-color)', color: 'white', cursor: 'pointer' }}>
+                    {currentPage}
+                  </button>
+                )}
+                
+                {currentPage < totalPages - 2 && <span style={{ padding: '0.5rem' }}>...</span>}
+                <button 
+                  onClick={() => setCurrentPage(totalPages)} 
+                  style={{ padding: '0.5rem 0.75rem', border: '1px solid var(--border-color)', borderRadius: '0.375rem', backgroundColor: currentPage === totalPages ? 'var(--accent-color)' : 'var(--bg-secondary)', color: currentPage === totalPages ? 'white' : 'var(--text-primary)', cursor: 'pointer' }}
+                >
+                  {totalPages}
+                </button>
+              </>
+            )}
+
+            <button 
+              onClick={() => setCurrentPage(prev => Math.min(prev + 1, totalPages))} 
+              disabled={currentPage === totalPages}
+              style={{ padding: '0.5rem 0.75rem', border: '1px solid var(--border-color)', borderRadius: '0.375rem', cursor: currentPage === totalPages ? 'not-allowed' : 'pointer', backgroundColor: 'var(--bg-secondary)', color: 'var(--text-primary)' }}
+            >
+              ถัดไป
+            </button>
+          </div>
+        </div>
+      )}
     </div>
   );
 };

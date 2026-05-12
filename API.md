@@ -83,7 +83,9 @@
     "is_ec_approved": number,
     "is_deleted": 0,
     "created_at": "string",
-    "updated_at": "string"
+    "updated_at": "string",
+    "manager_name": "string",
+    "staff_name": "string"
   }
 ]
 ```
@@ -98,7 +100,9 @@
   "fund_type": "string",
   "title_th": "string",
   "title_en": "string",
-  "budget_amount": number
+  "budget_amount": number,
+  "manager_name": "string",
+  "staff_name": "string"
 }
 ```
 
