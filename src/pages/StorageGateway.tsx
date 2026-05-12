@@ -194,9 +194,19 @@ const StorageGateway: React.FC<StorageGatewayProps> = ({ currentUser }) => {
               <tr key={file.filename} style={{ opacity: file.isDeleted ? 0.6 : 1, backgroundColor: file.isDeleted ? 'var(--bg-tertiary)' : 'transparent' }}>
                 <td>
                   <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
-                    <a href={file.url} download={file.displayName} target="_blank" rel="noreferrer" style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', fontWeight: 500, color: file.isDeleted ? 'var(--text-secondary)' : 'var(--accent-color)', textDecoration: file.isDeleted ? 'line-through' : 'none' }}>
+                    <a href={file.url} download={file.displayName} target="_blank" rel="noreferrer" title={file.displayName} style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', fontWeight: 500, color: file.isDeleted ? 'var(--text-secondary)' : 'var(--accent-color)', textDecoration: file.isDeleted ? 'line-through' : 'none' }}>
                       <File size={16} />
-                      {file.displayName}
+                      {(() => {
+                        const name = file.displayName;
+                        if (name.length > 20) {
+                          const extIndex = name.lastIndexOf('.');
+                          if (extIndex !== -1) {
+                            return name.substring(0, 20) + '...' + name.substring(extIndex);
+                          }
+                          return name.substring(0, 20) + '...';
+                        }
+                        return name;
+                      })()}
                     </a>
                     {file.isDeleted && <span className="badge badge-danger">Soft Deleted</span>}
                   </div>

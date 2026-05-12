@@ -291,7 +291,7 @@ const ProjectDashboard = () => {
     return <FileText size={16} />;
   };
 
-  const renderDocumentLink = (url) => {
+  const renderDocumentLink = (url, truncate = true) => {
     if (!url) return null;
     let name = url.split('/').pop();
     try { name = decodeURIComponent(name); } catch(e){}
@@ -304,9 +304,20 @@ const ProjectDashboard = () => {
       name = name.substring(name.indexOf('-') + 1);
     }
     
+    let displayName = name;
+    if (truncate && name.length > 20) {
+      const extIndex = name.lastIndexOf('.');
+      if (extIndex !== -1) {
+        const ext = name.substring(extIndex);
+        displayName = name.substring(0, 20) + '...' + ext;
+      } else {
+        displayName = name.substring(0, 20) + '...';
+      }
+    }
+    
     return (
-      <a href={url} target="_blank" rel="noreferrer" style={{ display: 'inline-flex', alignItems: 'center', gap: '0.35rem', color: 'var(--accent-color)', textDecoration: 'none', backgroundColor: 'var(--bg-tertiary)', padding: '0.25rem 0.5rem', borderRadius: '0.5rem', fontSize: '0.875rem', fontWeight: 500 }}>
-        {getFileIcon(name)} {name}
+      <a href={url} target="_blank" rel="noreferrer" title={name} style={{ display: 'inline-flex', alignItems: 'center', gap: '0.35rem', color: 'var(--accent-color)', textDecoration: 'none', backgroundColor: 'var(--bg-tertiary)', padding: '0.25rem 0.5rem', borderRadius: '0.5rem', fontSize: '0.875rem', fontWeight: 500 }}>
+        {getFileIcon(name)} {displayName}
       </a>
     );
   };
@@ -373,7 +384,7 @@ const ProjectDashboard = () => {
                     <div style={{ display: 'flex', flexDirection: 'column', gap: '0.25rem', marginTop: '0.25rem' }}>
                       {docs.map((docUrl, idx) => (
                         <div key={idx} style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-                          {renderDocumentLink(docUrl)}
+                          {renderDocumentLink(docUrl, false)}
                           <button onClick={() => handleRemoveDocument('proposal', docUrl)} style={{ background: 'transparent', border: 'none', color: 'var(--status-danger)', cursor: 'pointer', padding: '0.25rem' }} title="ลบเอกสาร"><Trash2 size={16} /></button>
                         </div>
                       ))}
@@ -392,7 +403,7 @@ const ProjectDashboard = () => {
                     <div style={{ display: 'flex', flexDirection: 'column', gap: '0.25rem', marginTop: '0.25rem' }}>
                       {docs.map((docUrl, idx) => (
                         <div key={idx} style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-                          {renderDocumentLink(docUrl)}
+                          {renderDocumentLink(docUrl, false)}
                           <button onClick={() => handleRemoveDocument('closure', docUrl)} style={{ background: 'transparent', border: 'none', color: 'var(--status-danger)', cursor: 'pointer', padding: '0.25rem' }} title="ลบเอกสาร"><Trash2 size={16} /></button>
                         </div>
                       ))}

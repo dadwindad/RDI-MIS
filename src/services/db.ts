@@ -34,6 +34,12 @@ export interface AuditLog {
   timestamp: string;
 }
 
+export interface Role {
+  id: number;
+  name: string;
+  permissions: string[];
+}
+
 const API_URL = '/api';
 
 const getHeaders = () => {
@@ -238,6 +244,45 @@ export const db = {
       const res = await fetch(`${API_URL}/apps/${id}`, {
         method: 'DELETE',
         headers: getHeaders()
+      });
+      return res.ok;
+    } catch (e) {
+      console.error(e);
+      return false;
+    }
+  },
+
+  getRoles: async (): Promise<Role[]> => {
+    try {
+      const res = await fetch(`${API_URL}/roles`);
+      if (!res.ok) throw new Error('Failed to fetch roles');
+      return await res.json();
+    } catch (e) {
+      console.error(e);
+      return [];
+    }
+  },
+
+  updateRole: async (id: number, permissions: string[]): Promise<boolean> => {
+    try {
+      const res = await fetch(`${API_URL}/roles/${id}`, {
+        method: 'PUT',
+        headers: getHeaders(),
+        body: JSON.stringify({ permissions })
+      });
+      return res.ok;
+    } catch (e) {
+      console.error(e);
+      return false;
+    }
+  },
+
+  createRole: async (name: string, permissions: string[]): Promise<boolean> => {
+    try {
+      const res = await fetch(`${API_URL}/roles`, {
+        method: 'POST',
+        headers: getHeaders(),
+        body: JSON.stringify({ name, permissions })
       });
       return res.ok;
     } catch (e) {

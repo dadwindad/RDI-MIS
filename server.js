@@ -73,6 +73,12 @@ db.serialize(() => {
     timestamp DATETIME DEFAULT CURRENT_TIMESTAMP
   )`);
 
+  db.run(`CREATE TABLE IF NOT EXISTS roles (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    name TEXT UNIQUE,
+    permissions TEXT
+  )`);
+
   db.run(`CREATE TABLE IF NOT EXISTS fiscal_years (
     year TEXT PRIMARY KEY,
     start_date TEXT,
@@ -102,6 +108,19 @@ db.serialize(() => {
       stmt.run('1001', 'admin', 'password', 'ดรัสวิน วงศ์ปรเมษฐ์', 'admin@ricp.ac.th', 'IT Division', 'admin', 'Active');
       stmt.run('1002', 'manager', 'password', 'Jane Smith', 'jane.s@ricp.ac.th', 'Finance & Budgeting', 'manager', 'Active');
       stmt.run('1003', 'staff', 'password', 'Prof. Alan Turing', 'alan.t@ricp.ac.th', 'Research Institute', 'staff', 'Active');
+      stmt.finalize();
+    }
+  });
+
+  // Seed initial roles if the table is empty
+  db.get("SELECT COUNT(*) as count FROM roles", (err, row) => {
+    if (row && row.count === 0) {
+      console.log("Seeding initial roles to SQLite...");
+      const stmt = db.prepare("INSERT INTO roles (name, permissions) VALUES (?, ?)");
+      stmt.run('System Admin', JSON.stringify(['pms:create', 'pms:approve', 'pms:read_all', 'finance:view', 'finance:approve', 'finance:disburse', 'core:manage_apps', 'core:manage_users']));
+      stmt.run('Researcher', JSON.stringify(['pms:create']));
+      stmt.run('Finance Officer', JSON.stringify(['finance:view', 'finance:approve', 'finance:disburse']));
+      stmt.run('Director', JSON.stringify(['pms:read_all', 'finance:view']));
       stmt.finalize();
     }
   });
@@ -177,6 +196,44 @@ app.delete('/api/users/:id', (req, res) => {
     if (err) return res.status(500).json({ error: err.message });
     if (this.changes > 0) logAudit(userName, 'DELETE_USER', `Deleted user ID: ${req.params.id}`);
     res.json({ success: true, deleted: this.changes });
+  });
+});
+
+// Get all roles
+app.get('/api/roles', (req, res) => {
+  db.all("SELECT * FROM roles", [], (err, rows) => {
+    if (err) return res.status(500).json({ error: err.message });
+    const roles = rows.map(row => ({
+      ...row,
+      permissions: JSON.parse(row.permissions || '[]')
+    }));
+    res.json(roles);
+  });
+});
+
+// Update role permissions
+app.put('/api/roles/:id', (req, res) => {
+  const { permissions } = req.body;
+  const userName = req.headers['x-user-name'] || 'System';
+  
+  db.run("UPDATE roles SET permissions = ? WHERE id = ?", 
+    [JSON.stringify(permissions), req.params.id], function(err) {
+    if (err) return res.status(500).json({ error: err.message });
+    logAudit(userName, 'UPDATE_ROLE', `Updated permissions for role ID ${req.params.id}`);
+    res.json({ success: true, updated: this.changes });
+  });
+});
+
+// Create custom role
+app.post('/api/roles', (req, res) => {
+  const { name, permissions } = req.body;
+  const userName = req.headers['x-user-name'] || 'System';
+  
+  db.run("INSERT INTO roles (name, permissions) VALUES (?, ?)", 
+    [name, JSON.stringify(permissions || [])], function(err) {
+    if (err) return res.status(500).json({ error: err.message });
+    logAudit(userName, 'CREATE_ROLE', `Created custom role: ${name}`);
+    res.json({ success: true, id: this.lastID });
   });
 });
 
