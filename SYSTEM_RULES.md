@@ -31,8 +31,19 @@
 - การสื่อสารระหว่าง Frontend กับ Backend หรือ Backend กับ Backend ต้องแนบ **JWT (JSON Web Token)** ใน `Authorization: Bearer <token>` Header เสมอ
 - Sub-App ไม่ต้องทำระบบ Login/Logout เอง ให้ตรวจสอบ Token ที่ได้มาจาก Core App 
 - **Role-Based Access Control (RBAC):** เช็คสิทธิ (Permissions) จาก Payload ที่อยู่ใน JWT Token เพื่อตัดสินใจว่าผู้ใช้มีสิทธิทำ Action นั้นๆ ใน Sub-App หรือไม่
+- **Custom Roles:** ระบบรองรับการสร้าง Custom Role และการแมปสิทธิ์ (Permissions) จาก Sub-Apps ผ่านหน้า Role & Permission Matrix
 
 ## 5. Development Workflow & API (กฎการพัฒนา)
 - **API-First Approach:** ต้องเขียนและตกลง OpenAPI Specification (Swagger) ให้เสร็จก่อนเริ่มเขียน Logic โค้ด
 - **Idempotency:** API ที่เกี่ยวกับการเปลี่ยนสถานะ (เช่น Approve, Reject) หรือธุรกรรมการเงิน ต้องเป็น Idempotent (ยิงซ้ำผลลัพธ์ต้องเท่าเดิม ไม่เกิด Action ซ้ำซ้อน)
 - **Event-Driven:** หากต้องส่งข้อมูลข้าม Sub-App ให้ใช้วิธี Publish/Subscribe (เช่น Webhook, RabbitMQ) ห้ามยิง API ซิงค์ข้อมูลแบบ Real-time ที่จะทำให้เกิดคอขวด
+
+## 6. UI/UX & Interaction Rules (กฎการออกแบบหน้าจอและการโต้ตอบ)
+- **Search Filters:** ช่องค้นหาหรือ Filter ในหน้าจัดการข้อมูล ควรออกแบบให้ยืดหยุ่นและใช้พื้นที่เต็มบรรทัด (Flex: 1) เพื่อความสวยงามและใช้งานง่าย
+- **Pagination:** ตารางแสดงข้อมูลขนาดใหญ่ (เช่น Audit Log, File List) ต้องมีระบบแบ่งหน้า (Pagination) โดยมีตัวเลือก 10, 50, 100 รายการต่อหน้า
+- **Filename Display:** การแสดงชื่อไฟล์ในตารางหรือรายการประวัติ หากชื่อยาวเกิน 20 ตัวอักษร ให้ย่อเหลือ 20 ตัวแรกแล้วต่อด้วย `...` ตามด้วยนามสกุลไฟล์ และต้องใส่ `title` เพื่อให้เห็นชื่อเต็มเมื่อเอาเมาส์ชี้ (Hover)
+- **Exception for Filename Display:** สำหรับการแสดงชื่อไฟล์ในส่วนของเอกสารแนบหลักของโครงการ (เช่น เอกสารเสนอโครงการ) ให้แสดงชื่อเต็ม ไม่ต้องย่อ
+
+## 7. Audit Logging (การบันทึกประวัติ)
+- **Display Name:** การบันทึกประวัติกิจกรรม (Audit Log) ต้องใช้ชื่อจริงของผู้ใช้งาน (Full Name) เสมอ ไม่ใช้ Username หรือ ID เพื่อให้อ่านง่ายและตรวจสอบได้ชัดเจน
+- **Header Encoding:** การส่งชื่อผู้ใช้งานผ่าน HTTP Header (เช่น `X-User-Name`) หากชื่อมีตัวอักษรนอกเหนือจาก ISO-8859-1 (เช่น ภาษาไทย) ต้องใช้ `encodeURIComponent` ก่อนส่ง และฝั่งรับต้องใช้ `decodeURIComponent` เพื่อป้องกัน Error
