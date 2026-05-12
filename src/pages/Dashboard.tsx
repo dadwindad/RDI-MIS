@@ -72,7 +72,7 @@ const Dashboard: React.FC<{ setActiveMenu: (menu: string) => void }> = ({ setAct
             <div className="card-title">Total Projects (PMS)</div>
             <div className="card-icon"><FolderGit2 size={24} /></div>
           </div>
-          <div className="card-value">{projects.length > 0 ? projects.length : '...'}</div>
+          <div className="card-value">{isLoading ? '...' : projects.length}</div>
           <div className="card-trend trend-up">
             <ArrowUpRight size={16} />
             <span>Across all fiscal years</span>
@@ -84,7 +84,7 @@ const Dashboard: React.FC<{ setActiveMenu: (menu: string) => void }> = ({ setAct
             <div className="card-title">Total Allocated Budget</div>
             <div className="card-icon"><Wallet size={24} /></div>
           </div>
-          <div className="card-value" style={{ fontSize: '1.5rem' }}>{projects.length > 0 ? formatCurrency(totalBudget) : '...'}</div>
+          <div className="card-value" style={{ fontSize: '1.5rem' }}>{isLoading ? '...' : formatCurrency(totalBudget)}</div>
           <div className="card-trend trend-up">
             <ArrowUpRight size={16} />
             <span>Managed by PMS</span>
@@ -96,7 +96,7 @@ const Dashboard: React.FC<{ setActiveMenu: (menu: string) => void }> = ({ setAct
             <div className="card-title">Remaining Budget</div>
             <div className="card-icon"><Wallet size={24} color="var(--status-success)" /></div>
           </div>
-          <div className="card-value" style={{ fontSize: '1.5rem' }}>{projects.length > 0 ? formatCurrency(totalBalance) : '...'}</div>
+          <div className="card-value" style={{ fontSize: '1.5rem' }}>{isLoading ? '...' : formatCurrency(totalBalance)}</div>
           <div className="card-trend trend-up">
             <ArrowUpRight size={16} />
             <span>Available for spending</span>
@@ -108,7 +108,7 @@ const Dashboard: React.FC<{ setActiveMenu: (menu: string) => void }> = ({ setAct
             <div className="card-title">Registered Sub-Apps</div>
             <div className="card-icon"><Blocks size={24} /></div>
           </div>
-          <div className="card-value">{apps.length > 0 ? apps.length : '...'}</div>
+          <div className="card-value">{isLoading ? '...' : apps.length}</div>
           <div className="card-trend trend-up">
             <ArrowUpRight size={16} />
             <span>{activeAppsCount} Active Apps</span>

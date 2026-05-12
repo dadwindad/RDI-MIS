@@ -21,8 +21,8 @@
 - **Styling**: Vanilla CSS (ตามแนวทางที่กำหนด)
 
 ## 📁 โครงสร้างโปรเจกต์ (Project Structure)
-- `/pms-app`: ตัวอย่าง Sub-App ระบบบริหารจัดการโครงการ (Project Management System)
-- `/sub-app-boilerplate`: โครงสร้างต้นแบบสำหรับสร้าง Sub-App ใหม่
+- `/sub-apps/pms-app`: ตัวอย่าง Sub-App ระบบบริหารจัดการโครงการ (Project Management System)
+- `/sub-apps/sub-app-boilerplate`: โครงสร้างต้นแบบสำหรับสร้าง Sub-App ใหม่
 - `/databases`: ที่เก็บไฟล์ฐานข้อมูล SQLite
 - `/storage`: ที่เก็บไฟล์อัปโหลด (จำลองการทำงาน)
 - `server.js`: Backend Server ของ Core App
@@ -37,9 +37,9 @@ npm install
 ```
 และสำหรับ Sub-App (เช่น pms-app):
 ```bash
-cd pms-app
+cd sub-apps/pms-app
 npm install
-cd ..
+cd ../..
 ```
 
 ### 2. รันระบบ
@@ -64,7 +64,7 @@ npm run dev
 
 *รัน Backend ของ Sub-App (PMS):*
 ```bash
-cd pms-app
+cd sub-apps/pms-app
 npm start
 ```
 

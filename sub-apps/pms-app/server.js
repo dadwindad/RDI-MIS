@@ -12,7 +12,7 @@ app.use(express.urlencoded({ limit: 104857600, extended: true }));
 app.use('/uploads', express.static('uploads'));
 
 // Temporary fix for user name
-const coreDbPath = path.join(process.cwd(), '..', 'databases', 'core_platform.sqlite');
+const coreDbPath = path.join(process.cwd(), '..', '..', 'databases', 'core_platform.sqlite');
 const coreDb = new sqlite3.Database(coreDbPath);
 coreDb.run("UPDATE users SET name = 'ดรัสวิน วงศ์ปรเมษฐ์' WHERE username = 'admin'", function(err) {
   if (err) console.error('Temp update failed:', err.message);

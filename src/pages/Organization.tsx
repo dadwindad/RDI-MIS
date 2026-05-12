@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { Blocks, Calculator, FileCheck, Landmark, AppWindow } from 'lucide-react';
-import ProjectDashboard from '../../pms-app/src/components/ProjectDashboard';
+import ProjectDashboard from '../../sub-apps/pms-app/src/components/ProjectDashboard';
 import { db, AppRegistry as IAppRegistry } from '../services/db';
 
 interface OrganizationProps {

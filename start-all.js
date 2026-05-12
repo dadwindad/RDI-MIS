@@ -7,7 +7,7 @@ const npmCmd = isWindows ? 'npm.cmd' : 'npm';
 const services = [
   { name: 'CORE-BE', command: npmCmd, args: ['run', 'server'], cwd: process.cwd() },
   { name: 'CORE-FE', command: npmCmd, args: ['run', 'dev'], cwd: process.cwd() },
-  { name: 'PMS-BE ', command: npmCmd, args: ['start'], cwd: path.join(process.cwd(), 'pms-app') }
+  { name: 'PMS-BE ', command: npmCmd, args: ['start'], cwd: path.join(process.cwd(), 'sub-apps', 'pms-app') }
 ];
 
 console.log('Starting all services...');
