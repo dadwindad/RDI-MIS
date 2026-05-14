@@ -12,6 +12,7 @@ import StorageGateway from './pages/StorageGateway';
 import ApiDocs from './pages/ApiDocs';
 import SettingsPage from './pages/Settings';
 import Login from './pages/Login';
+import PublicCalendarView from '../sub-apps/calendar-app/src/components/PublicCalendarView';
 import { db, User } from './services/db';
 
 function App() {
@@ -22,7 +23,41 @@ function App() {
   React.useEffect(() => {
     const savedUser = localStorage.getItem('ricp_current_user');
     if (savedUser) setCurrentUser(JSON.parse(savedUser));
+
+    const handlePathChange = () => {
+      const path = window.location.pathname;
+      if (path === '/' || path === '') {
+        setActiveMenu('dashboard');
+      } else if (path === '/pms' || path === '/calendar' || path === '/finance' || path === '/ec' || path === '/ip') {
+        setActiveMenu('org-' + path.substring(1));
+      } else {
+        setActiveMenu(path.substring(1));
+      }
+    };
+    
+    window.addEventListener('popstate', handlePathChange);
+    handlePathChange();
+    return () => window.removeEventListener('popstate', handlePathChange);
   }, []);
+
+  React.useEffect(() => {
+    if (window.location.pathname === '/public-calendar') {
+      return;
+    }
+
+    let path = '/';
+    if (activeMenu === 'dashboard') {
+      path = '/';
+    } else if (activeMenu.startsWith('org-')) {
+      path = '/' + activeMenu.substring(4);
+    } else {
+      path = '/' + activeMenu;
+    }
+
+    if (window.location.pathname !== path) {
+      window.history.pushState(null, '', path);
+    }
+  }, [activeMenu]);
 
   const handleLogin = (user: User) => {
     setCurrentUser(user);
@@ -33,6 +68,10 @@ function App() {
     setCurrentUser(null);
     localStorage.removeItem('ricp_current_user');
   };
+
+  if (window.location.pathname === '/public-calendar') {
+    return <PublicCalendarView />;
+  }
 
   if (!currentUser) {
     return <Login onLogin={handleLogin} />;

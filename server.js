@@ -40,7 +40,10 @@ const storage = multer.diskStorage({
   },
   filename: (req, file, cb) => {
     const uniqueSuffix = Date.now() + '-' + Math.round(Math.random() * 1E9);
-    cb(null, uniqueSuffix + '-' + file.originalname);
+    const appSource = req.body.appSource || 'Core System';
+    const activity = req.body.activity || 'General';
+    const uploader = req.body.uploader || 'Unknown';
+    cb(null, `[${appSource}]_[${activity}]_[${uploader}]_${uniqueSuffix}-${file.originalname}`);
   }
 });
 const upload = multer({ storage });
@@ -283,7 +286,7 @@ app.post('/api/audit', (req, res) => {
 
 // Get Audit Logs
 app.get('/api/audit', (req, res) => {
-  db.all("SELECT * FROM audit_logs ORDER BY timestamp DESC LIMIT 100", [], (err, rows) => {
+  db.all("SELECT id, user_name, action, details, replace(timestamp, ' ', 'T') || 'Z' AS timestamp FROM audit_logs ORDER BY timestamp DESC LIMIT 100", [], (err, rows) => {
     if (err) return res.status(500).json({ error: err.message });
     res.json(rows);
   });

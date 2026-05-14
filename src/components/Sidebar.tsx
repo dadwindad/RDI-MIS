@@ -25,6 +25,7 @@ interface SidebarProps {
 const Sidebar: React.FC<SidebarProps> = ({ activeMenu, setActiveMenu, isOpen }) => {
   const [activeApps, setActiveApps] = useState<AppRegistry[]>([]);
   const [isOrgMenuOpen, setIsOrgMenuOpen] = useState(false);
+  const [isSystemMenuOpen, setIsSystemMenuOpen] = useState(false);
 
   useEffect(() => {
     const fetchApps = async () => {
@@ -76,13 +77,13 @@ const Sidebar: React.FC<SidebarProps> = ({ activeMenu, setActiveMenu, isOpen }) 
           )}
         </div>
         {isOpen && isOrgMenuOpen && activeApps.length > 0 && (
-          <div style={{ paddingLeft: '2.5rem', display: 'flex', flexDirection: 'column', gap: '0.25rem', marginTop: '-0.25rem', marginBottom: '0.5rem' }}>
+          <div style={{ paddingLeft: '2.5rem', display: 'flex', flexDirection: 'column', gap: '0.25rem', marginTop: '0', marginBottom: '0.5rem' }}>
             {activeApps.map(app => (
               <div 
                 key={app.app_id}
                 className={`menu-item ${activeMenu === app.app_id ? 'active' : ''}`} 
                 onClick={(e) => { e.stopPropagation(); setActiveMenu(app.app_id); }} 
-                style={{ padding: '0.5rem', fontSize: '0.875rem', minHeight: '32px', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis', display: 'flex', alignItems: 'center' }}
+                style={{ padding: '0.25rem', fontSize: '0.875rem', minHeight: '32px', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis', display: 'flex', alignItems: 'center' }}
                 title={app.name}
               >
                 {app.name}
@@ -107,27 +108,42 @@ const Sidebar: React.FC<SidebarProps> = ({ activeMenu, setActiveMenu, isOpen }) 
           {isOpen && <span>Roles & Permissions</span>}
         </div>
 
-        <div className="menu-category">System</div>
-        <div className={`menu-item ${activeMenu === 'apps' ? 'active' : ''}`} onClick={() => setActiveMenu('apps')}>
-          <Blocks size={20} />
-          {isOpen && <span>App Registry</span>}
+        <div 
+          className="menu-category" 
+          onClick={() => setIsSystemMenuOpen(!isSystemMenuOpen)}
+          style={{ cursor: 'pointer', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}
+        >
+          <span>System</span>
+          {isOpen && (
+            <div style={{ display: 'flex', alignItems: 'center', paddingRight: '1.5rem' }}>
+              {isSystemMenuOpen ? <ChevronDown size={14} /> : <ChevronRight size={14} />}
+            </div>
+          )}
         </div>
-        <div className={`menu-item ${activeMenu === 'storage' ? 'active' : ''}`} onClick={() => setActiveMenu('storage')}>
-          <FileBox size={20} />
-          {isOpen && <span>Storage Gateway</span>}
-        </div>
-        <div className={`menu-item ${activeMenu === 'audit' ? 'active' : ''}`} onClick={() => setActiveMenu('audit')}>
-          <Activity size={20} />
-          {isOpen && <span>Audit Logs</span>}
-        </div>
-        <div className={`menu-item ${activeMenu === 'api-docs' ? 'active' : ''}`} onClick={() => setActiveMenu('api-docs')}>
-          <Code size={20} />
-          {isOpen && <span>API Documentation</span>}
-        </div>
-        <div className={`menu-item ${activeMenu === 'settings' ? 'active' : ''}`} onClick={() => setActiveMenu('settings')}>
-          <Settings size={20} />
-          {isOpen && <span>Settings</span>}
-        </div>
+        {isSystemMenuOpen && (
+          <>
+            <div className={`menu-item ${activeMenu === 'apps' ? 'active' : ''}`} onClick={() => setActiveMenu('apps')}>
+              <Blocks size={20} />
+              {isOpen && <span>App Registry</span>}
+            </div>
+            <div className={`menu-item ${activeMenu === 'storage' ? 'active' : ''}`} onClick={() => setActiveMenu('storage')}>
+              <FileBox size={20} />
+              {isOpen && <span>Storage Gateway</span>}
+            </div>
+            <div className={`menu-item ${activeMenu === 'audit' ? 'active' : ''}`} onClick={() => setActiveMenu('audit')}>
+              <Activity size={20} />
+              {isOpen && <span>Audit Logs</span>}
+            </div>
+            <div className={`menu-item ${activeMenu === 'api-docs' ? 'active' : ''}`} onClick={() => setActiveMenu('api-docs')}>
+              <Code size={20} />
+              {isOpen && <span>API Documentation</span>}
+            </div>
+            <div className={`menu-item ${activeMenu === 'settings' ? 'active' : ''}`} onClick={() => setActiveMenu('settings')}>
+              <Settings size={20} />
+              {isOpen && <span>Settings</span>}
+            </div>
+          </>
+        )}
       </div>
     </aside>
   );

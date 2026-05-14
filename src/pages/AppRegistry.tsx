@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Blocks, Plus, Check, X, ShieldAlert, Edit2, Trash2, AlertCircle, AlertTriangle } from 'lucide-react';
+import { Blocks, Plus, Check, X, ShieldAlert, Edit2, Trash2, AlertCircle, AlertTriangle, CheckCircle } from 'lucide-react';
 import { db, AppRegistry as IAppRegistry, User } from '../services/db';
 
 interface AppRegistryProps {
@@ -95,7 +95,10 @@ const AppRegistry: React.FC<AppRegistryProps> = ({ currentUser }) => {
   };
 
   const parseRoles = (jsonString: string) => {
-    try { return JSON.parse(jsonString) as string[]; } 
+    try { 
+      const parsed = JSON.parse(jsonString);
+      return Array.isArray(parsed) ? parsed : [];
+    } 
     catch { return []; }
   };
 
@@ -118,7 +121,7 @@ const AppRegistry: React.FC<AppRegistryProps> = ({ currentUser }) => {
       </div>
 
       <div className="dashboard-grid">
-        {apps.map(app => (
+        {(apps || []).map(app => (
           <div key={app.app_id} className="card">
             <div className="card-header">
               <div className="card-title" style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>

@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { Blocks, Calculator, FileCheck, Landmark, AppWindow } from 'lucide-react';
 import ProjectDashboard from '../../sub-apps/pms-app/src/components/ProjectDashboard';
+import CalendarView from '../../sub-apps/calendar-app/src/components/CalendarView';
 import { db, AppRegistry as IAppRegistry } from '../services/db';
 
 interface OrganizationProps {
@@ -45,6 +46,21 @@ const Organization: React.FC<OrganizationProps> = ({ activeApp, setActiveMenu })
         </div>
         <div style={{ backgroundColor: 'var(--bg-secondary)', borderRadius: '1rem', overflow: 'hidden', border: '1px solid var(--border-color)' }}>
           <ProjectDashboard />
+        </div>
+      </div>
+    );
+  }
+
+  if (activeApp === 'org-calendar') {
+    return (
+      <div>
+        <div style={{ marginBottom: '1rem' }}>
+          <button onClick={() => setActiveMenu('organization')} style={{ padding: '0.5rem 1rem', cursor: 'pointer', border: '1px solid var(--border-color)', borderRadius: '0.5rem', background: 'var(--bg-secondary)' }}>
+            ← Back to Organization Hub
+          </button>
+        </div>
+        <div style={{ backgroundColor: 'var(--bg-secondary)', borderRadius: '1rem', overflow: 'hidden', border: '1px solid var(--border-color)' }}>
+          <CalendarView />
         </div>
       </div>
     );

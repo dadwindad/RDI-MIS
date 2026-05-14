@@ -204,7 +204,8 @@ export const db = {
     try {
       const res = await fetch(`${API_URL}/apps`);
       if (!res.ok) throw new Error('Failed to fetch apps');
-      return await res.json();
+      const data = await res.json();
+      return Array.isArray(data) ? data : [];
     } catch (e) {
       console.error(e);
       return [];

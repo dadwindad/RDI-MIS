@@ -47,3 +47,14 @@
 ## 7. Audit Logging (การบันทึกประวัติ)
 - **Display Name:** การบันทึกประวัติกิจกรรม (Audit Log) ต้องใช้ชื่อจริงของผู้ใช้งาน (Full Name) เสมอ ไม่ใช้ Username หรือ ID เพื่อให้อ่านง่ายและตรวจสอบได้ชัดเจน
 - **Header Encoding:** การส่งชื่อผู้ใช้งานผ่าน HTTP Header (เช่น `X-User-Name`) หากชื่อมีตัวอักษรนอกเหนือจาก ISO-8859-1 (เช่น ภาษาไทย) ต้องใช้ `encodeURIComponent` ก่อนส่ง และฝั่งรับต้องใช้ `decodeURIComponent` เพื่อป้องกัน Error
+- **Database & File Operations:** ต้องบันทึกทุกกิจกรรมที่มีการเปลี่ยนแปลงข้อมูลในฐานข้อมูล (สร้าง, แก้ไข, ลบ) และการจัดการไฟล์ (อัปโหลด, ดาวน์โหลด, ลบ) เสมอ
+- **Current User Context:** การบันทึกประวัติต้องใช้ข้อมูลผู้ใช้งานปัจจุบัน (Current User) ที่เป็นผู้กระทำกิจกรรมนั้นเสมอ โดยอ้างอิงจากชื่อจริง (Full Name) ตามกฎ Display Name
+- **Activity Source:** ต้องบันทึกแหล่งที่มา (Source) ของกิจกรรมเสมอ (เช่น ชื่อ Sub-App หรือระบบย่อยที่เกิดกิจกรรม) เพื่อให้สามารถแยกแยะและตรวจสอบย้อนกลับได้ง่าย
+
+## 8. Local Storage Gateway (ระบบจัดเก็บไฟล์จำลอง)
+- **Centralized Storage**: ระบบใช้ Core App (Port 3001) เป็น Gateway ในการจัดการไฟล์ทั้งหมด โดยเก็บไฟล์ไว้ที่โฟลเดอร์ `storage` ใน Root directory
+- **Filename Pattern**: การบันทึกไฟล์ลงดิสก์ต้องใช้รูปแบบชื่อไฟล์ที่รวม Metadata เสมอ: `[appSource]_[activity]_[uploader]_Timestamp-Random_OriginalName` เพื่อให้สามารถระบุที่มาและผู้รับผิดชอบได้
+- **Soft Delete Mechanism**: เมื่อมีการลบไฟล์ผ่าน API ห้ามลบไฟล์จริงออกจากดิสก์ทันที ให้เปลี่ยนชื่อไฟล์โดยต่อท้ายด้วย `.deleted` เสมอ
+- **Bulk Cleanup**: การลบไฟล์จริงออกจากดิสก์ (Hard Delete) จะทำได้ผ่าน Endpoint `/api/storage/clear-deleted` เท่านั้น ซึ่งจะลบเฉพาะไฟล์ที่ลงท้ายด้วย `.deleted`
+- **Metadata Association**: การอัปโหลดไฟล์ต้องส่งข้อมูล `appSource`, `activity`, และ `uploader` ผ่าน Body เสมอเพื่อให้ระบบสร้างชื่อไฟล์ที่ถูกต้อง
+- **Static Access**: ไฟล์ที่อัปโหลดแล้วสามารถเข้าถึงได้ผ่าน URL `http://localhost:3001/storage/ชื่อไฟล์`
