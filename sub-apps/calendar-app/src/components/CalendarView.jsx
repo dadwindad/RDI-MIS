@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Calendar as CalendarIcon, Clock, MapPin, FileText, Filter, Plus, ChevronLeft, ChevronRight, X, Users, AlertCircle, ChevronDown, Settings, Edit2 } from 'lucide-react';
+import { Calendar as CalendarIcon, Clock, MapPin, FileText, Filter, Plus, ChevronLeft, ChevronRight, X, Users, AlertCircle, ChevronDown, Settings, Edit2, LayoutDashboard } from 'lucide-react';
 import './Calendar.css';
 import KanbanBoard from './KanbanBoard';
 
@@ -461,7 +461,7 @@ const CalendarView = () => {
 
   return (
     <div className="calendar-container">
-      <div className="calendar-header" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-end', borderBottom: '1px solid var(--border-color)', marginBottom: '1.5rem', paddingBottom: '0' }}>
+      <div className="calendar-header" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-end', marginBottom: '1.5rem', paddingBottom: '0' }}>
         <div style={{ paddingBottom: '1rem' }}>
           <h1 className="calendar-title">
             {viewMode === 'kanban' ? 'Workflow Board' : 'Smart Office & Calendar'}
@@ -470,42 +470,30 @@ const CalendarView = () => {
             {viewMode === 'kanban' ? 'ระบบจัดการสถานะหนังสือสารบรรณ (e-Document)' : 'จัดการกำหนดการและเอกสารธุรการ (Unified Calendar View)'}
           </p>
         </div>
-        <div style={{ display: 'flex', gap: '0.25rem' }}>
-          <button
+        <div style={{ display: 'flex', gap: '0.5rem', backgroundColor: 'var(--bg-tertiary)', padding: '0.25rem', borderRadius: '0.5rem' }}>
+          <button 
             onClick={() => setViewMode('calendar')}
-            style={{
-              padding: '0.5rem 1rem',
-              borderRadius: '0.5rem 0.5rem 0 0',
-              border: '1px solid',
-              borderColor: viewMode === 'calendar' ? 'var(--accent-color, #2563eb)' : 'var(--border-color)',
-              borderBottom: viewMode === 'calendar' ? '1px solid var(--bg-primary)' : '1px solid var(--border-color)',
-              backgroundColor: viewMode === 'calendar' ? 'rgba(59, 130, 246, 0.1)' : 'var(--bg-secondary)',
-              color: viewMode === 'calendar' ? 'var(--accent-color, #2563eb)' : 'var(--text-secondary)',
-              fontWeight: 600,
-              cursor: 'pointer',
-              marginBottom: '-1px',
-              zIndex: viewMode === 'calendar' ? 1 : 0
+            style={{ 
+              display: 'flex', alignItems: 'center', gap: '0.5rem', padding: '0.5rem 1rem', border: 'none', borderRadius: '0.375rem', cursor: 'pointer',
+              backgroundColor: viewMode === 'calendar' ? 'var(--bg-secondary)' : 'transparent',
+              boxShadow: viewMode === 'calendar' ? '0 1px 3px rgba(0,0,0,0.1)' : 'none',
+              fontWeight: viewMode === 'calendar' ? 600 : 400,
+              color: viewMode === 'calendar' ? 'var(--text-primary)' : 'var(--text-secondary)'
             }}
           >
-            ปฏิทิน
+            <CalendarIcon size={18} /> ปฏิทิน
           </button>
-          <button
+          <button 
             onClick={() => setViewMode('kanban')}
-            style={{
-              padding: '0.5rem 1rem',
-              borderRadius: '0.5rem 0.5rem 0 0',
-              border: '1px solid',
-              borderColor: viewMode === 'kanban' ? 'var(--accent-color, #2563eb)' : 'var(--border-color)',
-              borderBottom: viewMode === 'kanban' ? '1px solid var(--bg-primary)' : '1px solid var(--border-color)',
-              backgroundColor: viewMode === 'kanban' ? 'rgba(59, 130, 246, 0.1)' : 'var(--bg-secondary)',
-              color: viewMode === 'kanban' ? 'var(--accent-color, #2563eb)' : 'var(--text-secondary)',
-              fontWeight: 600,
-              cursor: 'pointer',
-              marginBottom: '-1px',
-              zIndex: viewMode === 'kanban' ? 1 : 0
+            style={{ 
+              display: 'flex', alignItems: 'center', gap: '0.5rem', padding: '0.5rem 1rem', border: 'none', borderRadius: '0.375rem', cursor: 'pointer',
+              backgroundColor: viewMode === 'kanban' ? 'var(--bg-secondary)' : 'transparent',
+              boxShadow: viewMode === 'kanban' ? '0 1px 3px rgba(0,0,0,0.1)' : 'none',
+              fontWeight: viewMode === 'kanban' ? 600 : 400,
+              color: viewMode === 'kanban' ? 'var(--text-primary)' : 'var(--text-secondary)'
             }}
           >
-            ระบบติดตาม
+            <LayoutDashboard size={18} /> ระบบติดตาม
           </button>
         </div>
       </div>

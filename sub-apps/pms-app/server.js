@@ -11,14 +11,6 @@ app.use(express.json({ limit: 104857600 })); // 100MB
 app.use(express.urlencoded({ limit: 104857600, extended: true }));
 app.use('/uploads', express.static('uploads'));
 
-// Temporary fix for user name
-const coreDbPath = path.join(process.cwd(), '..', '..', 'databases', 'core_platform.sqlite');
-const coreDb = new sqlite3.Database(coreDbPath);
-coreDb.run("UPDATE users SET name = 'ดรัสวิน วงศ์ปรเมษฐ์' WHERE username = 'admin'", function(err) {
-  if (err) console.error('Temp update failed:', err.message);
-  else console.log('Temp update success. Rows:', this.changes);
-  coreDb.close();
-});
 
 // Auth Middleware (จำลองรับ JWT จาก Core App)
 const requireAuth = (req, res, next) => {
@@ -401,6 +393,63 @@ app.delete('/api/pms/fund-types/:id', requireAuth, (req, res) => {
     if (err) return res.status(500).json({ error: err.message });
     res.json({ success: true, deleted: this.changes });
   });
+});
+
+// 9. Aggregated Data for other apps (QA Inbox)
+app.get('/api/pms/aggregated-data', requireAuth, async (req, res) => {
+  try {
+    // 1. Fetch Projects from Local DB
+    const projects = await new Promise((resolve, reject) => {
+      db.all("SELECT * FROM projects WHERE is_deleted = 0", [], (err, rows) => {
+        if (err) reject(err);
+        else resolve(rows);
+      });
+    });
+
+    // 2. Fetch Activities from Calendar App (Smart Office)
+    let activities = [];
+    try {
+      const soRes = await fetch('http://localhost:3003/api/activities', {
+        headers: { 'Authorization': req.headers['authorization'] }
+      });
+      if (soRes.ok) {
+        activities = await soRes.json();
+      }
+    } catch (e) {
+      console.error('PMS: Failed to fetch from Calendar:', e.message);
+    }
+
+    // 3. Merge and Format
+    const data = [
+      ...projects.map(p => ({
+        id: p.id,
+        title: p.title_th,
+        year: p.fiscal_year_id || '2567',
+        type: 'โครงการ',
+        source: 'PMS'
+      })),
+      ...activities.map(a => {
+        let year = a.fiscal_year;
+        if (!year && a.start_date) {
+          const date = new Date(a.start_date);
+          const month = date.getMonth() + 1;
+          const ceYear = date.getFullYear();
+          year = (month >= 10 ? ceYear + 1 : ceYear) + 543;
+        }
+        return {
+          id: a.id,
+          title: a.title,
+          year: year?.toString() || '2567',
+          type: 'กิจกรรม',
+          source: 'Calendar'
+        };
+      })
+    ];
+
+    res.json(data);
+  } catch (e) {
+    res.status(500).json({ error: e.message });
+  }
 });
 
 // Global Error Handler

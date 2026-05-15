@@ -17,7 +17,14 @@ import { db, User } from './services/db';
 
 function App() {
   const [currentUser, setCurrentUser] = React.useState<User | null>(null);
-  const [activeMenu, setActiveMenu] = React.useState('dashboard');
+  const [activeMenu, setActiveMenu] = React.useState(() => {
+    const path = window.location.pathname;
+    if (path === '/' || path === '') return 'dashboard';
+    if (path === '/pms' || path === '/calendar' || path === '/finance' || path === '/ec' || path === '/ip' || path === '/qa') {
+      return 'org-' + path.substring(1);
+    }
+    return path.substring(1);
+  });
   const [sidebarOpen, setSidebarOpen] = React.useState(true);
 
   React.useEffect(() => {
@@ -28,7 +35,7 @@ function App() {
       const path = window.location.pathname;
       if (path === '/' || path === '') {
         setActiveMenu('dashboard');
-      } else if (path === '/pms' || path === '/calendar' || path === '/finance' || path === '/ec' || path === '/ip') {
+      } else if (path === '/pms' || path === '/calendar' || path === '/finance' || path === '/ec' || path === '/ip' || path === '/qa') {
         setActiveMenu('org-' + path.substring(1));
       } else {
         setActiveMenu(path.substring(1));
@@ -36,7 +43,6 @@ function App() {
     };
     
     window.addEventListener('popstate', handlePathChange);
-    handlePathChange();
     return () => window.removeEventListener('popstate', handlePathChange);
   }, []);
 
@@ -86,7 +92,7 @@ function App() {
           {activeMenu === 'dashboard' && <Dashboard setActiveMenu={setActiveMenu} />}
           {activeMenu.startsWith('org') && <Organization activeApp={activeMenu} setActiveMenu={setActiveMenu} />}
           {activeMenu === 'users' && <UserManagement currentUser={currentUser} />}
-          {activeMenu === 'apps' && <AppRegistry currentUser={currentUser} />}
+          {activeMenu === 'apps' && <AppRegistry currentUser={currentUser} setActiveMenu={setActiveMenu} />}
           {activeMenu === 'fiscal-year' && <FiscalYear currentUser={currentUser} />}
           {activeMenu === 'roles' && <RoleMatrix />}
           {activeMenu === 'audit' && <AuditLogPage />}

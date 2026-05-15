@@ -8,7 +8,8 @@ const services = [
   { name: 'CORE-BE', command: npmCmd, args: ['run', 'server'], cwd: process.cwd() },
   { name: 'CORE-FE', command: npmCmd, args: ['run', 'dev'], cwd: process.cwd() },
   { name: 'PMS-BE ', command: npmCmd, args: ['start'], cwd: path.join(process.cwd(), 'sub-apps', 'pms-app') },
-  { name: 'CALENDAR-BE', command: npmCmd, args: ['start'], cwd: path.join(process.cwd(), 'sub-apps', 'calendar-app') }
+  { name: 'CALENDAR-BE', command: npmCmd, args: ['start'], cwd: path.join(process.cwd(), 'sub-apps', 'calendar-app') },
+  { name: 'QA-BE', command: npmCmd, args: ['start'], cwd: path.join(process.cwd(), 'sub-apps', 'qa-app') }
 ];
 
 console.log('Starting all services...');

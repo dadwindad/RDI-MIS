@@ -4,9 +4,10 @@ import { db, AppRegistry as IAppRegistry, User } from '../services/db';
 
 interface AppRegistryProps {
   currentUser: User;
+  setActiveMenu: (menu: string) => void;
 }
 
-const AppRegistry: React.FC<AppRegistryProps> = ({ currentUser }) => {
+const AppRegistry: React.FC<AppRegistryProps> = ({ currentUser, setActiveMenu }) => {
   const [apps, setApps] = useState<IAppRegistry[]>([]);
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [isEditing, setIsEditing] = useState(false);
@@ -122,7 +123,26 @@ const AppRegistry: React.FC<AppRegistryProps> = ({ currentUser }) => {
 
       <div className="dashboard-grid">
         {(apps || []).map(app => (
-          <div key={app.app_id} className="card">
+          <div 
+            key={app.app_id} 
+            className="card" 
+            onClick={() => {
+              if (app.status === 'Active') {
+                setActiveMenu(app.app_id);
+              } else {
+                showToast(`App ${app.name} is currently under maintenance.`, 'error');
+              }
+            }}
+            style={{ cursor: 'pointer', transition: 'transform 0.2s, box-shadow 0.2s' }}
+            onMouseEnter={(e) => {
+              e.currentTarget.style.transform = 'translateY(-4px)';
+              e.currentTarget.style.boxShadow = '0 10px 25px -5px rgba(0, 0, 0, 0.1)';
+            }}
+            onMouseLeave={(e) => {
+              e.currentTarget.style.transform = 'translateY(0)';
+              e.currentTarget.style.boxShadow = 'none';
+            }}
+          >
             <div className="card-header">
               <div className="card-title" style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
                 <Blocks size={20} color={app.status === 'Active' ? "var(--status-success)" : "var(--text-secondary)"} /> {app.name}
@@ -157,7 +177,7 @@ const AppRegistry: React.FC<AppRegistryProps> = ({ currentUser }) => {
               </div>
               
               {currentUser.role === 'admin' && (
-                <div style={{ marginTop: '1rem', display: 'flex', gap: '0.5rem' }}>
+                <div style={{ marginTop: '1rem', display: 'flex', gap: '0.5rem' }} onClick={(e) => e.stopPropagation()}>
                   <button onClick={() => handleEdit(app)} style={{ flex: 1, padding: '0.5rem', border: '1px solid var(--border-color)', background: 'transparent', borderRadius: '0.25rem', cursor: 'pointer' }}>Edit</button>
                   <button onClick={() => toggleStatus(app)} style={{ flex: 1, padding: '0.5rem', border: 'none', background: app.status === 'Active' ? 'rgba(245, 158, 11, 0.1)' : 'rgba(16, 185, 129, 0.1)', color: app.status === 'Active' ? 'var(--status-warning)' : 'var(--status-success)', borderRadius: '0.25rem', cursor: 'pointer' }}>
                     {app.status === 'Active' ? 'Set Maintenance' : 'Set Active'}

@@ -143,6 +143,18 @@ const ProjectDashboard = () => {
     fetchUsers();
   }, []);
 
+  useEffect(() => {
+    const openProjectId = localStorage.getItem('pms_open_project_id');
+    if (openProjectId && projects.length > 0) {
+      const prj = projects.find(p => p.id === openProjectId);
+      if (prj) {
+        setSelectedProject(prj);
+        fetchTransactions(prj.id);
+        localStorage.removeItem('pms_open_project_id');
+      }
+    }
+  }, [projects]);
+
   const handleSaveProject = async (e) => {
     e.preventDefault();
     try {

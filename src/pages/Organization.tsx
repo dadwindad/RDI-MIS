@@ -1,7 +1,8 @@
 import React, { useState, useEffect } from 'react';
-import { Blocks, Calculator, FileCheck, Landmark, AppWindow } from 'lucide-react';
+import { Blocks, Calculator, FileCheck, Landmark, AppWindow, BarChart3 } from 'lucide-react';
 import ProjectDashboard from '../../sub-apps/pms-app/src/components/ProjectDashboard';
 import CalendarView from '../../sub-apps/calendar-app/src/components/CalendarView';
+import QAMetrics from '../../sub-apps/qa-app/src/components/QAMetrics';
 import { db, AppRegistry as IAppRegistry } from '../services/db';
 
 interface OrganizationProps {
@@ -25,6 +26,7 @@ const Organization: React.FC<OrganizationProps> = ({ activeApp, setActiveMenu })
     if (id.includes('finance')) return <Calculator size={40} />;
     if (id.includes('ec')) return <FileCheck size={40} />;
     if (id.includes('ip')) return <Landmark size={40} />;
+    if (id.includes('qa')) return <BarChart3 size={40} />;
     return <AppWindow size={40} />;
   };
 
@@ -61,6 +63,21 @@ const Organization: React.FC<OrganizationProps> = ({ activeApp, setActiveMenu })
         </div>
         <div style={{ backgroundColor: 'var(--bg-secondary)', borderRadius: '1rem', overflow: 'hidden', border: '1px solid var(--border-color)' }}>
           <CalendarView />
+        </div>
+      </div>
+    );
+  }
+
+  if (activeApp === 'org-qa') {
+    return (
+      <div>
+        <div style={{ marginBottom: '1rem' }}>
+          <button onClick={() => setActiveMenu('organization')} style={{ padding: '0.5rem 1rem', cursor: 'pointer', border: '1px solid var(--border-color)', borderRadius: '0.5rem', background: 'var(--bg-secondary)' }}>
+            ← Back to Organization Hub
+          </button>
+        </div>
+        <div style={{ backgroundColor: 'var(--bg-secondary)', borderRadius: '1rem', overflow: 'hidden', border: '1px solid var(--border-color)' }}>
+          <QAMetrics setActiveMenu={setActiveMenu} />
         </div>
       </div>
     );

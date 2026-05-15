@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Plus, UserCheck, UserX, Mail, Building, Trash2, Edit2, X } from 'lucide-react';
+import { Plus, UserCheck, UserX, Mail, Building, Trash2, Edit2, X, AlertCircle, Info } from 'lucide-react';
 import { db, User } from '../services/db';
 
 interface UserManagementProps {
@@ -13,20 +13,36 @@ const UserManagement: React.FC<UserManagementProps> = ({ currentUser }) => {
   const [formData, setFormData] = useState<Partial<User>>({
     username: '', password: '', name: '', email: '', dept: '', role: 'staff', status: 'Active'
   });
+  const [confirmDialog, setConfirmDialog] = useState<{ show: boolean; title: string; message: string; onConfirm: () => void }>({
+    show: false, title: '', message: '', onConfirm: () => {}
+  });
+  const [alertDialog, setAlertDialog] = useState<{ show: boolean; title: string; message: string }>({
+    show: false, title: '', message: ''
+  });
 
   useEffect(() => {
     db.getUsers().then(setUsers);
   }, []);
 
-  const handleDelete = async (id: string) => {
+  const handleDelete = (id: string) => {
     if (id === currentUser.id) {
-      alert("You cannot delete yourself.");
+      setAlertDialog({
+        show: true,
+        title: "Cannot Delete Yourself",
+        message: "For security reasons, you cannot delete your own account while logged in."
+      });
       return;
     }
-    if (confirm("Are you sure you want to delete this user?")) {
-      await db.deleteUser(id);
-      db.getUsers().then(setUsers);
-    }
+    
+    setConfirmDialog({
+      show: true,
+      title: "Confirm Delete",
+      message: "Are you sure you want to delete this user? This action cannot be undone.",
+      onConfirm: async () => {
+        await db.deleteUser(id);
+        db.getUsers().then(setUsers);
+      }
+    });
   };
 
   const openAddModal = () => {
@@ -192,6 +208,54 @@ const UserManagement: React.FC<UserManagementProps> = ({ currentUser }) => {
                 </button>
               </div>
             </form>
+          </div>
+        </div>
+      )}
+      {/* Confirm Dialog */}
+      {confirmDialog.show && (
+        <div style={{ position: 'fixed', inset: 0, backgroundColor: 'rgba(0,0,0,0.6)', backdropFilter: 'blur(4px)', display: 'flex', justifyContent: 'center', alignItems: 'center', zIndex: 2000 }}>
+          <div style={{ backgroundColor: 'var(--bg-secondary)', padding: '2rem', borderRadius: '1.5rem', width: '400px', textAlign: 'center', boxShadow: '0 25px 50px -12px rgba(0,0,0,0.25)', border: '1px solid var(--border-color)' }}>
+            <div style={{ width: '64px', height: '64px', backgroundColor: 'rgba(239, 68, 68, 0.1)', color: '#ef4444', borderRadius: '50%', display: 'flex', alignItems: 'center', justifyContent: 'center', margin: '0 auto 1.5rem auto' }}>
+              <Trash2 size={32} />
+            </div>
+            <h3 style={{ marginTop: 0, fontSize: '1.25rem' }}>{confirmDialog.title}</h3>
+            <p style={{ color: 'var(--text-secondary)', lineHeight: 1.6 }}>{confirmDialog.message}</p>
+            <div style={{ display: 'flex', gap: '0.75rem', marginTop: '2rem' }}>
+              <button
+                onClick={() => setConfirmDialog({ ...confirmDialog, show: false })}
+                style={{ flex: 1, padding: '0.75rem', borderRadius: '0.75rem', border: '1px solid var(--border-color)', backgroundColor: 'transparent', color: 'var(--text-primary)', cursor: 'pointer', fontWeight: 600, fontSize: '0.95rem' }}
+              >
+                Cancel
+              </button>
+              <button
+                onClick={() => {
+                  confirmDialog.onConfirm();
+                  setConfirmDialog({ ...confirmDialog, show: false });
+                }}
+                style={{ flex: 1, padding: '0.75rem', borderRadius: '0.75rem', border: 'none', backgroundColor: '#ef4444', color: 'white', cursor: 'pointer', fontWeight: 600, fontSize: '0.95rem', boxShadow: '0 4px 6px -1px rgba(239, 68, 68, 0.3)' }}
+              >
+                Confirm
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Alert Dialog */}
+      {alertDialog.show && (
+        <div style={{ position: 'fixed', inset: 0, backgroundColor: 'rgba(0,0,0,0.6)', backdropFilter: 'blur(4px)', display: 'flex', justifyContent: 'center', alignItems: 'center', zIndex: 2000 }}>
+          <div style={{ backgroundColor: 'var(--bg-secondary)', padding: '2rem', borderRadius: '1.5rem', width: '400px', textAlign: 'center', boxShadow: '0 25px 50px -12px rgba(0,0,0,0.25)', border: '1px solid var(--border-color)' }}>
+            <div style={{ width: '64px', height: '64px', backgroundColor: 'rgba(59, 130, 246, 0.1)', color: '#3b82f6', borderRadius: '50%', display: 'flex', alignItems: 'center', justifyContent: 'center', margin: '0 auto 1.5rem auto' }}>
+              <AlertCircle size={32} />
+            </div>
+            <h3 style={{ marginTop: 0, fontSize: '1.25rem' }}>{alertDialog.title}</h3>
+            <p style={{ color: 'var(--text-secondary)', lineHeight: 1.6 }}>{alertDialog.message}</p>
+            <button
+              onClick={() => setAlertDialog({ ...alertDialog, show: false })}
+              style={{ width: '100%', marginTop: '2rem', padding: '0.75rem', borderRadius: '0.75rem', border: 'none', backgroundColor: 'var(--accent-color)', color: 'white', cursor: 'pointer', fontWeight: 600, fontSize: '0.95rem' }}
+            >
+              OK
+            </button>
           </div>
         </div>
       )}

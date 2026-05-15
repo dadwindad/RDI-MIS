@@ -108,7 +108,7 @@ db.serialize(() => {
     if (row.count === 0) {
       console.log("Seeding initial users to SQLite...");
       const stmt = db.prepare("INSERT INTO users VALUES (?, ?, ?, ?, ?, ?, ?, ?)");
-      stmt.run('1001', 'admin', 'password', 'ดรัสวิน วงศ์ปรเมษฐ์', 'admin@ricp.ac.th', 'IT Division', 'admin', 'Active');
+      stmt.run('1001', 'admin', 'password', 'สมมติ นามสมมติ', 'admin@ricp.ac.th', 'IT Division', 'admin', 'Active');
       stmt.run('1002', 'manager', 'password', 'Jane Smith', 'jane.s@ricp.ac.th', 'Finance & Budgeting', 'manager', 'Active');
       stmt.run('1003', 'staff', 'password', 'Prof. Alan Turing', 'alan.t@ricp.ac.th', 'Research Institute', 'staff', 'Active');
       stmt.finalize();

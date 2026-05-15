@@ -107,6 +107,16 @@ db.serialize(() => {
       stmt.finalize();
     }
   });
+
+  // Seed sample activities if empty
+  db.get("SELECT COUNT(*) as count FROM staff_activities", (err, row) => {
+    if (row && row.count === 0) {
+      db.run("INSERT INTO staff_activities (id, title, type, start_date, end_date, location) VALUES (?, ?, ?, ?, ?, ?)",
+        ['ACT-SEED-01', 'ประชุมประเมินคุณภาพภายใน', 'ประชุมภายใน', '2026-05-15', '2026-05-15', 'ห้องประชุม 1']);
+      db.run("INSERT INTO staff_activities (id, title, type, start_date, end_date, location) VALUES (?, ?, ?, ?, ?, ?)",
+        ['ACT-SEED-02', 'อบรมการใช้งานระบบ MIS', 'ประชุมภายใน', '2026-05-20', '2026-05-20', 'ห้อง Lab']);
+    }
+  });
 });
 
 export default db;

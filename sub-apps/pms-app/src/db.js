@@ -79,6 +79,18 @@ db.serialize(() => {
     db.run("INSERT OR IGNORE INTO fund_types VALUES ('FUND-1', 'ทุนสนับสนุนงานมูลฐาน (Fundamental Fund)')");
     db.run("INSERT OR IGNORE INTO fund_types VALUES ('FUND-2', 'ทุนวิจัยภายใน (RDI)')");
     db.run("INSERT OR IGNORE INTO fund_types VALUES ('FUND-3', 'ทุนวิจัยภายนอก (External)')");
+
+    // Seed sample approved projects if empty
+    db.get("SELECT COUNT(*) as count FROM projects", (err, row) => {
+      if (row && row.count === 0) {
+        db.run("INSERT INTO projects (id, fiscal_year_id, fund_type, title_th, title_en, budget_amount, budget_balance, status, manager_name) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)",
+          ['PRJ-SEED-01', '2567', 'FUND-2', 'โครงการวิจัยการเพิ่มประสิทธิภาพการผลิต', 'Research on Production Efficiency', 500000, 500000, 'APPROVED', 'สมมติ นามสมมติ']);
+        db.run("INSERT INTO projects (id, fiscal_year_id, fund_type, title_th, title_en, budget_amount, budget_balance, status, manager_name) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)",
+          ['PRJ-SEED-02', '2567', 'FUND-3', 'โครงการความร่วมมือวิจัยนานาชาติ', 'International Research Collaboration', 1200000, 1200000, 'CLOSED', 'สมมติ นามสมมติ']);
+        db.run("INSERT INTO projects (id, fiscal_year_id, fund_type, title_th, title_en, budget_amount, budget_balance, status, manager_name) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)",
+          ['PRJ-SEED-03', '2568', 'FUND-2', 'โครงการวิจัยและพัฒนานวัตกรรมสำหรับเมืองอัจฉริยะ', 'Smart City Innovation Research', 850000, 850000, 'APPROVED', 'สมมติ นามสมมติ']);
+      }
+    });
   });
 });
 
