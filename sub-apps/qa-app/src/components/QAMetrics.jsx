@@ -40,6 +40,10 @@ const QAMetrics = ({ setActiveMenu }) => {
   const [confirmDialog, setConfirmDialog] = useState({ show: false, title: '', message: '', onConfirm: null });
   const [isEditingKpi, setIsEditingKpi] = useState(false);
   const [editingKpiId, setEditingKpiId] = useState(null);
+  const [topics, setTopics] = useState([]);
+  const [isAddingTopic, setIsAddingTopic] = useState(false);
+  const [isEditingTopic, setIsEditingTopic] = useState(false);
+  const [editingTopicId, setEditingTopicId] = useState(null);
   const [targetsModal, setTargetsModal] = useState({ show: false, targets: [], kpiName: '' });
   const [mappingModal, setMappingModal] = useState({ show: false, item: null });
   const [mappingSearch, setMappingSearch] = useState('');
@@ -57,9 +61,65 @@ const QAMetrics = ({ setActiveMenu }) => {
     setTimeout(() => setToast({ show: false, message: '', type: 'success' }), 3000);
   };
 
+  const [draggedKpiId, setDraggedKpiId] = useState(null);
+  const [isDraggingOverTopicId, setIsDraggingOverTopicId] = useState(null);
+
+  const handleDragStart = (e, kpiId) => {
+    setDraggedKpiId(kpiId);
+    e.dataTransfer.setData('kpiId', kpiId);
+    e.dataTransfer.effectAllowed = 'move';
+    // Adding a small delay to allow the ghost image to be created before styling changes
+    setTimeout(() => {
+      e.target.style.opacity = '0.4';
+      e.target.style.border = '2px dashed var(--accent-color)';
+    }, 0);
+  };
+
+  const handleDragEnd = (e) => {
+    setDraggedKpiId(null);
+    setIsDraggingOverTopicId(null);
+    e.target.style.opacity = '1';
+    e.target.style.border = '1px solid var(--border-color)';
+  };
+
+  const handleDragOver = (e, topicId) => {
+    e.preventDefault();
+    if (isDraggingOverTopicId !== topicId) {
+      setIsDraggingOverTopicId(topicId);
+    }
+  };
+
+  const handleDrop = async (e, topicId) => {
+    e.preventDefault();
+    setIsDraggingOverTopicId(null);
+    const kpiId = e.dataTransfer.getData('kpiId') || draggedKpiId;
+    if (!kpiId) return;
+
+    try {
+      const token = getAuthToken();
+      console.log(`Dragging KPI ${kpiId} to Topic ${topicId}`);
+      const res = await fetch(`http://localhost:3005/api/qa/kpis/${kpiId}`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json', 'Authorization': token },
+        body: JSON.stringify({ topic_id: topicId })
+      });
+      if (res.ok) {
+        showToast('ย้าย KPI สำเร็จ', 'success');
+        fetchData();
+      } else {
+        const errData = await res.json().catch(() => ({}));
+        showToast(errData.error || `ย้าย KPI ล้มเหลว (Status: ${res.status})`, 'error');
+      }
+    } catch (err) {
+      console.error('Drop error:', err);
+      showToast('เกิดข้อผิดพลาดในการย้าย: ' + err.message, 'error');
+    }
+  };
+
   const [newFramework, setNewFramework] = useState({ name: '', fiscal_year: '2567', category: 'มหาวิทยาลัย', description: '' });
   const [newCategory, setNewCategory] = useState('');
-  const [newKpi, setNewKpi] = useState({ code: '', name: '', target_value: 0, unit: 'บทความ', weight: 1, description: '', evidence: '', targets: [{ label: 'เป้าหมายหลัก', value: 0, unit: 'บทความ' }] });
+  const [newTopic, setNewTopic] = useState({ code: '', name: '', description: '', evidence: '', evidence_path: '', evidence_name: '' });
+  const [newKpi, setNewKpi] = useState({ topic_id: '', code: '', name: '', target_value: 0, unit: 'บทความ', weight: 1, description: '', targets: [{ label: 'เป้าหมายหลัก', value: 0, unit: 'บทความ' }] });
 
   const getAuthToken = () => {
     const userStr = localStorage.getItem('ricp_current_user');
@@ -109,6 +169,9 @@ const QAMetrics = ({ setActiveMenu }) => {
           if (latestYear) setYearFilter(latestYear);
         }
       }
+
+      const topicRes = await fetch('http://localhost:3005/api/qa/topics');
+      if (topicRes.ok) setTopics(await topicRes.json());
 
       const catRes = await fetch('http://localhost:3005/api/qa/categories');
       if (catRes.ok) setCategories(await catRes.json());
@@ -192,9 +255,13 @@ const QAMetrics = ({ setActiveMenu }) => {
       const method = isEditingKpi ? 'PUT' : 'POST';
 
       // Sync top-level target_value and unit with the first target in the list
-      // This ensures the dashboard (which uses kpis.target_value/unit) stays in sync with settings
       const kpiToSave = { ...newKpi };
       if (kpiToSave.targets && kpiToSave.targets.length > 0) {
+        kpiToSave.targets = kpiToSave.targets.map(t => ({
+          ...t,
+          value: t.unit === 'ไฟล์' ? 0 : t.value
+        }));
+        
         kpiToSave.target_value = kpiToSave.targets[0].value;
         kpiToSave.unit = kpiToSave.targets[0].unit;
       }
@@ -208,7 +275,7 @@ const QAMetrics = ({ setActiveMenu }) => {
         logAudit(isEditingKpi ? 'UPDATE_KPI' : 'CREATE_KPI', `${isEditingKpi ? 'Updated' : 'Created'} KPI: ${newKpi.code} - ${newKpi.name}`);
         setIsAddingKpi(false);
         setIsEditingKpi(false);
-        setNewKpi({ code: '', name: '', target_value: 0, unit: 'บทความ', weight: 1, description: '', evidence: '', targets: [{ label: 'เป้าหมายหลัก', value: 0, unit: 'บทความ' }] });
+        setNewKpi({ topic_id: '', code: '', name: '', target_value: 0, unit: 'บทความ', weight: 1, description: '', targets: [{ label: 'เป้าหมายหลัก', value: 0, unit: 'บทความ' }] });
         fetchData();
       }
     } catch (e) { alert(e.message); }
@@ -249,7 +316,7 @@ const QAMetrics = ({ setActiveMenu }) => {
     } catch (e) { alert(`Upload failed: ${e.message}`); }
   };
 
-  const handleEvidenceUpload = async (file) => {
+  const handleTopicFileUpload = async (file) => {
     if (!file) return;
     const formData = new FormData();
     try {
@@ -257,7 +324,7 @@ const QAMetrics = ({ setActiveMenu }) => {
       const user = userStr ? JSON.parse(userStr) : { name: 'Unknown' };
 
       formData.append('appSource', 'QA Metrics');
-      formData.append('activity', 'KPI Evidence');
+      formData.append('activity', 'KPI Topic Evidence');
       formData.append('uploader', user.name);
       formData.append('file', file);
 
@@ -269,9 +336,64 @@ const QAMetrics = ({ setActiveMenu }) => {
       });
       if (res.ok) {
         const data = await res.json();
-        setNewKpi(prev => ({ ...prev, evidence_path: data.path, evidence_name: file.name }));
+        setNewTopic(prev => ({ ...prev, evidence_path: data.path, evidence_name: file.name }));
       }
     } catch (e) { alert(`Upload failed: ${e.message}`); }
+  };
+
+  const handleAddTopic = async (e) => {
+    e.preventDefault();
+    try {
+      const token = getAuthToken();
+      const url = isEditingTopic ? `http://localhost:3005/api/qa/topics/${editingTopicId}` : 'http://localhost:3005/api/qa/topics';
+      const method = isEditingTopic ? 'PUT' : 'POST';
+
+      if (!viewingFrameworkId && !isEditingTopic) {
+        showToast('ไม่พบ ID ของ Framework กรุณาลองใหม่อีกครั้ง', 'error');
+        return;
+      }
+
+      const res = await fetch(url, {
+        method: method,
+        headers: { 'Content-Type': 'application/json', 'Authorization': token },
+        body: JSON.stringify({ ...newTopic, framework_id: viewingFrameworkId })
+      });
+      
+      if (res.ok) {
+        logAudit(isEditingTopic ? 'UPDATE_TOPIC' : 'CREATE_TOPIC', `${isEditingTopic ? 'Updated' : 'Created'} Topic: ${newTopic.code} - ${newTopic.name}`);
+        setIsAddingTopic(false);
+        setIsEditingTopic(false);
+        setNewTopic({ code: '', name: '', description: '', evidence: '', evidence_path: '', evidence_name: '' });
+        fetchData();
+        showToast(isEditingTopic ? 'อัปเดตหัวข้อสำเร็จ' : 'เพิ่มหัวข้อสำเร็จ', 'success');
+      } else {
+        const err = await res.json();
+        showToast(err.error || 'ไม่สามารถบันทึกหัวข้อได้', 'error');
+      }
+    } catch (e) { 
+      showToast('เกิดข้อผิดพลาด: ' + e.message, 'error');
+    }
+  };
+
+  const handleDeleteTopic = async (id) => {
+    setConfirmDialog({
+      show: true,
+      title: 'ลบหัวข้อ (Topic)',
+      message: 'ยืนยันการลบหัวข้อนี้? ตัวชี้วัดที่อยู่ภายในจะยังคงอยู่แต่จะไม่ผูกกับหัวข้อใด',
+      onConfirm: async () => {
+        try {
+          const token = getAuthToken();
+          const res = await fetch(`http://localhost:3005/api/qa/topics/${id}`, {
+            method: 'DELETE',
+            headers: { 'Authorization': token }
+          });
+          if (res.ok) {
+            logAudit('DELETE_TOPIC', `Deleted topic ID: ${id}`);
+            fetchData();
+          }
+        } catch (e) { alert(e.message); }
+      }
+    });
   };
 
   const handleDirectTargetUpload = async (file, targetId) => {
@@ -555,8 +677,9 @@ const QAMetrics = ({ setActiveMenu }) => {
               <div style={{ color: 'var(--text-secondary)', fontSize: '0.875rem', display: 'flex', alignItems: 'center', gap: '0.5rem' }}><CheckCircle2 size={16} /> Met Target</div>
               <div style={{ fontSize: '2rem', fontWeight: 700, marginTop: '0.5rem', color: 'var(--status-success)' }}>
                 {filteredKpis.filter(k => {
-                  const targetVal = (k.targets && k.targets.length > 0) ? k.targets[0].value : k.target_value;
-                  return k.actual_count >= targetVal;
+                  const mainT = (k.targets && k.targets.length > 0) ? k.targets[0] : { value: k.target_value, unit: k.unit };
+                  if (mainT.unit === 'ไฟล์') return k.actual_count > 0;
+                  return k.actual_count >= mainT.value;
                 }).length}
               </div>
             </div>
@@ -616,7 +739,10 @@ const QAMetrics = ({ setActiveMenu }) => {
               <div style={{ display: 'flex', flexDirection: 'column', gap: '1.5rem' }}>
                 {filteredKpis.map(kpi => {
                   const mainTarget = (kpi.targets && kpi.targets.length > 0) ? kpi.targets[0] : { value: kpi.target_value, unit: kpi.unit };
-                  const percent = Math.min(Math.round((kpi.actual_count / mainTarget.value) * 100), 100);
+                  const isFileUnit = mainTarget.unit === 'ไฟล์';
+                  const percent = isFileUnit 
+                    ? (kpi.actual_count > 0 ? 100 : 0)
+                    : Math.min(Math.round((kpi.actual_count / (mainTarget.value || 1)) * 100), 100);
                   return (
                     <div
                       key={kpi.id}
@@ -638,7 +764,7 @@ const QAMetrics = ({ setActiveMenu }) => {
                           <span title={kpi.name} style={{ fontWeight: 500, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{kpi.name}</span>
                         </div>
                         <div style={{ gridColumn: 'span 2', fontSize: '0.875rem', textAlign: 'right', whiteSpace: 'nowrap' }}>
-                          <span style={{ fontWeight: 700 }}>{kpi.actual_count}</span> / {mainTarget.value} {mainTarget.unit}
+                          <span style={{ fontWeight: 700 }}>{kpi.actual_count}</span> {isFileUnit ? mainTarget.unit : `/ ${mainTarget.value} ${mainTarget.unit}`}
                         </div>
                       </div>
                       <div style={{ height: '10px', backgroundColor: 'var(--bg-tertiary)', borderRadius: '5px', overflow: 'hidden' }}>
@@ -958,121 +1084,300 @@ const QAMetrics = ({ setActiveMenu }) => {
             <div style={{ display: 'flex', flexDirection: 'column', gap: '1.5rem' }}>
               <div style={{ backgroundColor: 'var(--bg-secondary)', padding: '1.5rem', borderRadius: '1rem', border: '1px solid var(--border-color)', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
                 <div>
-                  <h3 style={{ margin: 0 }}>KPIs in this Framework</h3>
+                  <h3 style={{ margin: 0 }}>หัวข้อและตัวชี้วัด (Topics & KPIs)</h3>
                   <div style={{ display: 'flex', gap: '1rem', marginTop: '0.4rem' }}>
                     <div style={{ display: 'flex', alignItems: 'center', gap: '0.3rem', fontSize: '0.85rem', color: 'var(--text-secondary)' }}>
-                      <CheckCircle2 size={14} style={{ color: 'var(--accent-color)' }} />
-                      <span style={{ fontWeight: 600, color: 'var(--text-primary)' }}>{kpis.filter(k => k.framework_id === viewingFrameworkId).length}</span> KPIs
+                      <TrendingUp size={14} style={{ color: 'var(--accent-color)' }} />
+                      <span style={{ fontWeight: 600, color: 'var(--text-primary)' }}>{topics.filter(t => t.framework_id === viewingFrameworkId).length}</span> Topics
                     </div>
                     <div style={{ display: 'flex', alignItems: 'center', gap: '0.3rem', fontSize: '0.85rem', color: 'var(--text-secondary)' }}>
-                      <TrendingUp size={14} style={{ color: 'var(--status-success)' }} />
-                      <span style={{ fontWeight: 600, color: 'var(--text-primary)' }}>{kpis.filter(k => k.framework_id === viewingFrameworkId).reduce((acc, k) => acc + (k.targets?.length || 1), 0)}</span> Targets
+                      <CheckCircle2 size={14} style={{ color: 'var(--status-success)' }} />
+                      <span style={{ fontWeight: 600, color: 'var(--text-primary)' }}>{kpis.filter(k => k.framework_id === viewingFrameworkId).length}</span> KPIs
                     </div>
                   </div>
                 </div>
                 <button
                   onClick={() => {
-                    setNewKpi({ code: '', name: '', target_value: 0, unit: 'บทความ', weight: 1, description: '', evidence: '', targets: [{ label: 'เป้าหมายหลัก', value: 0, unit: 'บทความ' }] });
-                    setSelectedFrameworkId(viewingFrameworkId);
-                    setIsEditingKpi(false);
-                    setIsAddingKpi(true);
+                    setNewTopic({ code: '', name: '', description: '', evidence: '', evidence_path: '', evidence_name: '' });
+                    setIsEditingTopic(false);
+                    setIsAddingTopic(true);
                   }}
                   style={{ backgroundColor: 'var(--accent-color)', color: 'white', border: 'none', padding: '0.6rem 1.25rem', borderRadius: '0.5rem', cursor: 'pointer', fontWeight: 600 }}
                 >
-                  + Add New KPI
+                  + Add New Topic
                 </button>
               </div>
 
-              <div style={{ backgroundColor: 'var(--bg-secondary)', borderRadius: '1rem', border: '1px solid var(--border-color)', overflow: 'hidden' }}>
-                <table style={{ width: '100%', borderCollapse: 'collapse' }}>
-                  <thead>
-                    <tr style={{ backgroundColor: 'var(--bg-tertiary)', textAlign: 'left' }}>
-                      <th style={{ padding: '1rem', width: '80px' }}>Code</th>
-                      <th style={{ padding: '1rem', width: '300px' }}>KPI Name</th>
-                      <th style={{ padding: '1rem', textAlign: 'center' }}>Target</th>
-                      <th style={{ padding: '1rem' }}>Evidence (หลักฐาน)</th>
-                      <th style={{ padding: '1rem', textAlign: 'right' }}>Actions</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {kpis.filter(k => k.framework_id === viewingFrameworkId).map(kpi => (
-                      <tr key={kpi.id} style={{ borderBottom: '1px solid var(--border-color)' }}>
-                        <td style={{ padding: '1rem', fontWeight: 700, color: 'var(--accent-color)' }}>{kpi.code}</td>
-                        <td style={{ padding: '1rem' }}>
-                          <div style={{ fontWeight: 600 }}>{kpi.name}</div>
-                          <div style={{ fontSize: '0.75rem', color: 'var(--text-secondary)' }}>{kpi.description || 'No description'}</div>
-                        </td>
-                        <td style={{ padding: '1rem', textAlign: 'center' }}>
-                          <button
-                            onClick={() => setTargetsModal({
-                              show: true,
-                              targets: kpi.targets || [],
-                              kpiName: kpi.name,
-                              evidence: kpi.evidence,
-                              evidence_path: kpi.evidence_path,
-                              evidence_name: kpi.evidence_name
-                            })}
-                            style={{ background: 'none', border: 'none', color: 'var(--accent-color)', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '0.25rem', margin: '0 auto' }}
-                            title="ดูเป้าหมายทั้งหมด"
-                          >
-                            <Info size={18} />
-                            <span style={{ fontSize: '0.875rem', fontWeight: 600 }}>
-                              {kpi.targets?.length || 1}
-                            </span>
-                          </button>
-                        </td>
-                        <td style={{ padding: '1rem' }}>
-                          <div style={{ fontSize: '0.875rem', color: 'var(--text-secondary)', whiteSpace: 'pre-wrap' }}>{kpi.evidence || '-'}</div>
-                          {kpi.evidence_name && (
-                            <div style={{ fontSize: '0.7rem', color: 'var(--accent-color)', display: 'flex', alignItems: 'center', gap: '0.2rem', marginTop: '0.25rem', fontWeight: 600 }}>
-                              <FileText size={12} /> {kpi.evidence_name}
-                            </div>
-                          )}
-                        </td>
-                        <td style={{ padding: '1rem', textAlign: 'right' }}>
-                          <div style={{ display: 'flex', gap: '0.75rem', justifyContent: 'flex-end' }}>
-                            <button
-                              onClick={() => {
-                                setNewKpi({
-                                  code: kpi.code,
-                                  name: kpi.name,
-                                  target_value: kpi.target_value,
-                                  unit: kpi.unit,
-                                  weight: kpi.weight || 1,
-                                  description: kpi.description || '',
-                                  evidence: kpi.evidence || '',
-                                  evidence_path: kpi.evidence_path || '',
-                                  evidence_name: kpi.evidence_name || '',
-                                  targets: kpi.targets && kpi.targets.length > 0 ? kpi.targets.map(t => ({ ...t, id: t.id || Math.random() })) : [{ label: 'เป้าหมายหลัก', value: kpi.target_value, unit: kpi.unit }]
-                                });
-                                setEditingKpiId(kpi.id);
-                                setSelectedFrameworkId(viewingFrameworkId);
-                                setIsEditingKpi(true);
-                                setIsAddingKpi(true);
-                              }}
-                              style={{ background: 'none', border: 'none', color: 'var(--text-secondary)', cursor: 'pointer' }}
-                            >
-                              <Settings size={18} />
-                            </button>
-                            <button
-                              onClick={() => handleDeleteKpi(kpi.id)}
-                              style={{ background: 'none', border: 'none', color: 'var(--status-danger)', cursor: 'pointer' }}
-                            >
-                              <Trash2 size={18} />
-                            </button>
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '1.5rem' }}>
+                {topics.filter(t => t.framework_id === viewingFrameworkId).map(topic => (
+                  <div
+                    key={topic.id}
+                    onDragOver={(e) => handleDragOver(e, topic.id)}
+                    onDrop={(e) => handleDrop(e, topic.id)}
+                    onDragLeave={() => setIsDraggingOverTopicId(null)}
+                    style={{
+                      backgroundColor: 'var(--bg-secondary)',
+                      borderRadius: '1rem',
+                      border: '1px solid',
+                      borderColor: isDraggingOverTopicId === topic.id ? 'var(--accent-color)' : 'var(--border-color)',
+                      overflow: 'hidden',
+                      boxShadow: isDraggingOverTopicId === topic.id ? '0 0 0 2px var(--accent-color), 0 10px 15px -3px rgba(0,0,0,0.1)' : '0 1px 3px rgba(0,0,0,0.05)',
+                      transition: 'all 0.2s ease',
+                      transform: isDraggingOverTopicId === topic.id ? 'scale(1.01)' : 'scale(1)'
+                    }}
+                  >
+                    <div style={{ padding: '1.25rem', backgroundColor: 'var(--bg-tertiary)', borderBottom: '1px solid var(--border-color)', display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
+                      <div style={{ flex: 1 }}>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
+                          <span style={{ fontWeight: 800, color: 'var(--accent-color)', fontSize: '1.1rem' }}>{topic.code}</span>
+                          <h4 style={{ margin: 0, fontSize: '1.1rem', fontWeight: 700 }}>{topic.name}</h4>
+                        </div>
+                        {topic.description && <div style={{ fontSize: '0.85rem', color: 'var(--text-secondary)', marginTop: '0.25rem' }}>{topic.description}</div>}
+                        
+                        <div style={{ marginTop: '1rem', backgroundColor: 'var(--bg-secondary)', padding: '1rem', borderRadius: '0.75rem', border: '1px solid var(--border-color)' }}>
+                          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '0.5rem' }}>
+                            <span style={{ fontSize: '0.75rem', fontWeight: 800, color: 'var(--text-secondary)', textTransform: 'uppercase' }}>Evidence (หลักฐานการดำเนินงาน)</span>
                           </div>
-                        </td>
-                      </tr>
-                    ))}
-                    {kpis.filter(k => k.framework_id === viewingFrameworkId).length === 0 && (
-                      <tr>
-                        <td colSpan="4" style={{ padding: '3rem', textAlign: 'center', color: 'var(--text-secondary)' }}>
-                          ยังไม่มีตัวชี้วัดใน Framework นี้ กดปุ่ม + Add New KPI เพื่อเริ่มต้น
-                        </td>
-                      </tr>
-                    )}
-                  </tbody>
-                </table>
+                          <div style={{ 
+                            fontSize: '0.9rem', 
+                            color: topic.evidence ? 'var(--text-primary)' : '#9ca3af', 
+                            whiteSpace: 'pre-wrap',
+                            fontStyle: topic.evidence ? 'normal' : 'italic'
+                          }}>
+                            {topic.evidence || 'ยังไม่ได้ระบุรายละเอียดหลักฐาน'}
+                          </div>
+                          {topic.evidence_name && (
+                            <a 
+                              href={`http://localhost:3005${topic.evidence_path}`} 
+                              target="_blank" 
+                              rel="noreferrer"
+                              style={{ display: 'inline-flex', alignItems: 'center', gap: '0.3rem', fontSize: '0.75rem', color: 'var(--accent-color)', marginTop: '0.75rem', textDecoration: 'none', fontWeight: 600, backgroundColor: 'var(--accent-light)', padding: '0.25rem 0.6rem', borderRadius: '0.4rem' }}
+                            >
+                              <FileText size={14} /> {topic.evidence_name}
+                            </a>
+                          )}
+                        </div>
+                      </div>
+                      
+                      <div style={{ display: 'flex', gap: '0.5rem', marginLeft: '1.5rem' }}>
+                        <button
+                          onClick={() => {
+                            setNewTopic({ ...topic });
+                            setEditingTopicId(topic.id);
+                            setIsEditingTopic(true);
+                            setIsAddingTopic(true);
+                          }}
+                          style={{ backgroundColor: 'white', border: '1px solid var(--border-color)', color: 'var(--text-primary)', padding: '0.4rem 0.8rem', borderRadius: '0.5rem', cursor: 'pointer', fontSize: '0.8rem', fontWeight: 600, display: 'flex', alignItems: 'center', gap: '0.4rem' }}
+                        >
+                          <Settings size={14} /> Edit Topic
+                        </button>
+                        <button
+                          onClick={() => handleDeleteTopic(topic.id)}
+                          style={{ backgroundColor: 'rgba(239, 68, 68, 0.1)', border: 'none', color: '#ef4444', padding: '0.4rem 0.8rem', borderRadius: '0.5rem', cursor: 'pointer', fontSize: '0.8rem', fontWeight: 600 }}
+                        >
+                          <Trash2 size={14} />
+                        </button>
+                        <button
+                          onClick={() => {
+                            setNewKpi({ topic_id: topic.id, code: '', name: '', target_value: 0, unit: 'บทความ', weight: 1, description: '', targets: [{ label: 'เป้าหมายหลัก', value: 0, unit: 'บทความ' }] });
+                            setSelectedFrameworkId(viewingFrameworkId);
+                            setIsEditingKpi(false);
+                            setIsAddingKpi(true);
+                          }}
+                          style={{ backgroundColor: 'var(--accent-color)', color: 'white', border: 'none', padding: '0.4rem 1rem', borderRadius: '0.5rem', cursor: 'pointer', fontSize: '0.8rem', fontWeight: 600, boxShadow: '0 4px 6px -1px rgba(59, 130, 246, 0.3)' }}
+                        >
+                          + Add KPI
+                        </button>
+                      </div>
+                    </div>
+
+                    <div style={{ padding: '0 1rem' }}>
+                      <table style={{ width: '100%', borderCollapse: 'collapse' }}>
+                        <thead>
+                          <tr style={{ textAlign: 'left', borderBottom: '1px solid var(--border-color)' }}>
+                            <th style={{ padding: '1rem', width: '80px', fontSize: '0.75rem', color: 'var(--text-secondary)', textTransform: 'uppercase' }}>Code</th>
+                            <th style={{ padding: '1rem', fontSize: '0.75rem', color: 'var(--text-secondary)', textTransform: 'uppercase' }}>KPI Name</th>
+                            <th style={{ padding: '1rem', width: '150px', textAlign: 'center', fontSize: '0.75rem', color: 'var(--text-secondary)', textTransform: 'uppercase' }}>Targets</th>
+                            <th style={{ padding: '1rem', width: '120px', textAlign: 'right', fontSize: '0.75rem', color: 'var(--text-secondary)', textTransform: 'uppercase' }}>Actions</th>
+                          </tr>
+                        </thead>
+                        <tbody>
+                          {kpis.filter(k => k.topic_id === topic.id).map(kpi => (
+                            <tr 
+                              key={kpi.id} 
+                              draggable={true}
+                              onDragStart={(e) => handleDragStart(e, kpi.id)}
+                              onDragEnd={handleDragEnd}
+                              style={{ 
+                                borderBottom: '1px solid var(--border-color)',
+                                cursor: 'grab',
+                                transition: 'background-color 0.2s'
+                              }}
+                              onMouseEnter={e => e.currentTarget.style.backgroundColor = 'var(--bg-tertiary)'}
+                              onMouseLeave={e => e.currentTarget.style.backgroundColor = 'transparent'}
+                            >
+                              <td style={{ padding: '1rem', fontWeight: 700, color: 'var(--accent-color)' }}>{kpi.code}</td>
+                              <td style={{ padding: '1rem' }}>
+                                <div style={{ fontWeight: 600 }} title={kpi.name}>{kpi.name}</div>
+                                {kpi.description && <div style={{ fontSize: '0.75rem', color: 'var(--text-secondary)', marginTop: '0.1rem' }}>{kpi.description}</div>}
+                              </td>
+                              <td style={{ padding: '1rem', textAlign: 'center' }}>
+                                <button
+                                  onClick={() => setTargetsModal({ show: true, targets: kpi.targets || [], kpiName: kpi.name })}
+                                  style={{ background: 'none', border: 'none', color: 'var(--accent-color)', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '0.3rem', margin: '0 auto', fontSize: '0.85rem', fontWeight: 600 }}
+                                >
+                                  <Info size={16} /> {kpi.targets?.length || 1} Targets
+                                </button>
+                              </td>
+                              <td style={{ padding: '1rem', textAlign: 'right' }}>
+                                <div style={{ display: 'flex', gap: '0.75rem', justifyContent: 'flex-end' }}>
+                                  <button
+                                    onClick={() => {
+                                      setNewKpi({
+                                        topic_id: kpi.topic_id,
+                                        code: kpi.code,
+                                        name: kpi.name,
+                                        target_value: kpi.target_value,
+                                        unit: kpi.unit,
+                                        weight: kpi.weight || 1,
+                                        description: kpi.description || '',
+                                        targets: kpi.targets && kpi.targets.length > 0 ? kpi.targets.map(t => ({ ...t, id: t.id || Math.random() })) : [{ label: 'เป้าหมายหลัก', value: kpi.target_value, unit: kpi.unit }]
+                                      });
+                                      setEditingKpiId(kpi.id);
+                                      setSelectedFrameworkId(viewingFrameworkId);
+                                      setIsEditingKpi(true);
+                                      setIsAddingKpi(true);
+                                    }}
+                                    style={{ background: 'none', border: 'none', color: 'var(--text-secondary)', cursor: 'pointer' }}
+                                  >
+                                    <Settings size={16} />
+                                  </button>
+                                  <button
+                                    onClick={() => handleDeleteKpi(kpi.id)}
+                                    style={{ background: 'none', border: 'none', color: 'var(--status-danger)', cursor: 'pointer' }}
+                                  >
+                                    <Trash2 size={16} />
+                                  </button>
+                                </div>
+                              </td>
+                            </tr>
+                          ))}
+                          {kpis.filter(k => k.topic_id === topic.id).length === 0 && (
+                            <tr>
+                              <td colSpan="4" style={{ padding: '2rem', textAlign: 'center', color: 'var(--text-secondary)', fontSize: '0.85rem', fontStyle: 'italic' }}>ยังไม่มีตัวชี้วัดในหัวข้อนี้</td>
+                            </tr>
+                          )}
+                        </tbody>
+                      </table>
+                    </div>
+                  </div>
+                ))}
+
+                {kpis.filter(k => k.framework_id === viewingFrameworkId && !k.topic_id).length > 0 && (
+                  <div style={{ backgroundColor: 'rgba(245, 158, 11, 0.05)', borderRadius: '1.25rem', padding: '1.5rem', border: '1px dashed #f59e0b', marginTop: '1rem' }}>
+                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1.5rem' }}>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
+                        <div style={{ width: '40px', height: '40px', backgroundColor: 'rgba(245, 158, 11, 0.1)', color: '#f59e0b', borderRadius: '50%', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                          <AlertCircle size={20} />
+                        </div>
+                        <div>
+                          <h4 style={{ margin: 0, fontSize: '1.1rem', fontWeight: 700, color: '#d97706' }}>Uncategorized KPIs</h4>
+                          <div style={{ fontSize: '0.85rem', color: 'var(--text-secondary)' }}>These KPIs are not assigned to any topic. Please edit them to assign a topic.</div>
+                        </div>
+                      </div>
+                    </div>
+
+                    <div 
+                      style={{ padding: '0 1rem' }}
+                      onDragOver={(e) => handleDragOver(e, 'uncategorized')}
+                      onDrop={(e) => handleDrop(e, null)} // topic_id = null
+                      onDragLeave={() => setIsDraggingOverTopicId(null)}
+                    >
+                      <table style={{ 
+                        width: '100%', 
+                        borderCollapse: 'collapse',
+                        backgroundColor: isDraggingOverTopicId === 'uncategorized' ? 'rgba(245, 158, 11, 0.05)' : 'transparent',
+                        borderRadius: '0.5rem',
+                        transition: 'all 0.2s'
+                      }}>
+                        <thead>
+                          <tr style={{ textAlign: 'left', borderBottom: '1px solid var(--border-color)' }}>
+                            <th style={{ padding: '1rem', width: '80px', fontSize: '0.75rem', color: 'var(--text-secondary)', textTransform: 'uppercase' }}>Code</th>
+                            <th style={{ padding: '1rem', fontSize: '0.75rem', color: 'var(--text-secondary)', textTransform: 'uppercase' }}>KPI Name</th>
+                            <th style={{ padding: '1rem', width: '150px', textAlign: 'center', fontSize: '0.75rem', color: 'var(--text-secondary)', textTransform: 'uppercase' }}>Targets</th>
+                            <th style={{ padding: '1rem', width: '120px', textAlign: 'right', fontSize: '0.75rem', color: 'var(--text-secondary)', textTransform: 'uppercase' }}>Actions</th>
+                          </tr>
+                        </thead>
+                        <tbody>
+                          {kpis.filter(k => k.framework_id === viewingFrameworkId && !k.topic_id).map(kpi => (
+                            <tr 
+                              key={kpi.id} 
+                              draggable={true}
+                              onDragStart={(e) => handleDragStart(e, kpi.id)}
+                              onDragEnd={handleDragEnd}
+                              style={{ 
+                                borderBottom: '1px solid var(--border-color)',
+                                cursor: 'grab',
+                                transition: 'background-color 0.2s'
+                              }}
+                            >
+                              <td style={{ padding: '1rem', fontWeight: 700, color: '#f59e0b' }}>{kpi.code}</td>
+                              <td style={{ padding: '1rem' }}>
+                                <div style={{ fontWeight: 600 }} title={kpi.name}>{kpi.name}</div>
+                                {kpi.description && <div style={{ fontSize: '0.75rem', color: 'var(--text-secondary)', marginTop: '0.1rem' }}>{kpi.description}</div>}
+                              </td>
+                              <td style={{ padding: '1rem', textAlign: 'center' }}>
+                                <button
+                                  onClick={() => setTargetsModal({ show: true, targets: kpi.targets || [], kpiName: kpi.name })}
+                                  style={{ background: 'none', border: 'none', color: 'var(--accent-color)', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '0.3rem', margin: '0 auto', fontSize: '0.85rem', fontWeight: 600 }}
+                                >
+                                  <Info size={16} /> {kpi.targets?.length || 1} Targets
+                                </button>
+                              </td>
+                              <td style={{ padding: '1rem', textAlign: 'right' }}>
+                                <div style={{ display: 'flex', gap: '0.75rem', justifyContent: 'flex-end' }}>
+                                  <button
+                                    onClick={() => {
+                                      setNewKpi({
+                                        topic_id: '',
+                                        code: kpi.code,
+                                        name: kpi.name,
+                                        target_value: kpi.target_value,
+                                        unit: kpi.unit,
+                                        weight: kpi.weight || 1,
+                                        description: kpi.description || '',
+                                        targets: kpi.targets && kpi.targets.length > 0 ? kpi.targets.map(t => ({ ...t, id: t.id || Math.random() })) : [{ label: 'เป้าหมายหลัก', value: kpi.target_value, unit: kpi.unit }]
+                                      });
+                                      setEditingKpiId(kpi.id);
+                                      setSelectedFrameworkId(viewingFrameworkId);
+                                      setIsEditingKpi(true);
+                                      setIsAddingKpi(true);
+                                    }}
+                                    style={{ background: 'none', color: 'var(--text-secondary)', cursor: 'pointer', padding: '0.5rem', display: 'flex', alignItems: 'center', justifyContent: 'center', backgroundColor: 'var(--bg-secondary)', borderRadius: '0.5rem', border: '1px solid var(--border-color)' }}
+                                  >
+                                    <Settings size={18} />
+                                  </button>
+                                  <button
+                                    onClick={() => handleDeleteKpi(kpi.id)}
+                                    style={{ background: 'none', color: 'var(--status-danger)', cursor: 'pointer', padding: '0.5rem', display: 'flex', alignItems: 'center', justifyContent: 'center', backgroundColor: 'rgba(239, 68, 68, 0.05)', borderRadius: '0.5rem', border: '1px solid rgba(239, 68, 68, 0.1)' }}
+                                  >
+                                    <Trash2 size={18} />
+                                  </button>
+                                </div>
+                              </td>
+                            </tr>
+                          ))}
+                        </tbody>
+                      </table>
+                    </div>
+                  </div>
+                )}
+
+                {topics.filter(t => t.framework_id === viewingFrameworkId).length === 0 && (
+                  <div style={{ padding: '3rem', textAlign: 'center', color: 'var(--text-secondary)', backgroundColor: 'var(--bg-secondary)', borderRadius: '1rem', border: '1px solid var(--border-color)' }}>
+                    ยังไม่มีหัวข้อ (Topic) ใน Framework นี้ กดปุ่ม + Add New Topic เพื่อเริ่มต้น
+                  </div>
+                )}
               </div>
             </div>
           ) : (
@@ -1139,389 +1444,7 @@ const QAMetrics = ({ setActiveMenu }) => {
         </div>
       )}
 
-      {/* Global Modals Area */}
 
-      {/* 1. Add Framework Modal */}
-      {isAddingFramework && (
-        <div style={{ position: 'fixed', inset: 0, backgroundColor: 'rgba(0,0,0,0.5)', display: 'flex', justifyContent: 'center', alignItems: 'center', zIndex: 1000 }}>
-          <div style={{ backgroundColor: 'var(--bg-secondary)', padding: '2rem', borderRadius: '1rem', width: '400px', boxShadow: '0 20px 25px -5px rgba(0,0,0,0.1)' }}>
-            <h3 style={{ marginTop: 0 }}>{isEditingFramework ? 'Edit Framework' : 'Create New Framework'}</h3>
-            <form onSubmit={handleAddFramework} style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
-              <div style={{ display: 'flex', flexDirection: 'column', gap: '0.25rem' }}>
-                <label style={{ fontSize: '0.875rem', fontWeight: 600 }}>Framework Name</label>
-                <input required type="text" value={newFramework.name} onChange={e => setNewFramework({ ...newFramework, name: e.target.value })} style={{ padding: '0.6rem', borderRadius: '0.5rem', border: '1px solid var(--border-color)' }} />
-              </div>
-              <div style={{ display: 'flex', gap: '1rem' }}>
-                <div style={{ flex: 1, display: 'flex', flexDirection: 'column', gap: '0.25rem' }}>
-                  <label style={{ fontSize: '0.875rem', fontWeight: 600 }}>Fiscal Year</label>
-                  <input required type="text" value={newFramework.fiscal_year} onChange={e => setNewFramework({ ...newFramework, fiscal_year: e.target.value })} style={{ padding: '0.6rem', borderRadius: '0.5rem', border: '1px solid var(--border-color)' }} />
-                </div>
-                <div style={{ flex: 1, display: 'flex', flexDirection: 'column', gap: '0.25rem' }}>
-                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                    <label style={{ fontSize: '0.875rem', fontWeight: 600 }}>Category</label>
-                    <button type="button" onClick={() => setIsManagingCategories(!isManagingCategories)} style={{ background: 'none', border: 'none', color: 'var(--accent-color)', fontSize: '0.75rem', cursor: 'pointer', fontWeight: 600 }}>
-                      {isManagingCategories ? 'Close' : 'Manage'}
-                    </button>
-                  </div>
-                  <select value={newFramework.category} onChange={e => setNewFramework({ ...newFramework, category: e.target.value })} style={{ padding: '0.6rem', borderRadius: '0.5rem', border: '1px solid var(--border-color)' }}>
-                    {categories.map(c => <option key={c.id} value={c.name}>{c.name}</option>)}
-                  </select>
-                </div>
-              </div>
-
-              <div style={{ display: 'flex', flexDirection: 'column', gap: '0.25rem' }}>
-                <label style={{ fontSize: '0.875rem', fontWeight: 600 }}>Description</label>
-                <textarea
-                  placeholder="อธิบายรายละเอียดของ Framework นี้..."
-                  value={newFramework.description}
-                  onChange={e => setNewFramework({ ...newFramework, description: e.target.value })}
-                  style={{ padding: '0.6rem', borderRadius: '0.5rem', border: '1px solid var(--border-color)', minHeight: '80px', resize: 'vertical', fontFamily: 'inherit' }}
-                />
-              </div>
-
-              {isManagingCategories && (
-                <div style={{ backgroundColor: 'var(--bg-tertiary)', padding: '1rem', borderRadius: '0.5rem', marginTop: '0.5rem', border: '1px solid var(--border-color)' }}>
-                  <label style={{ fontSize: '0.75rem', fontWeight: 700, display: 'block', marginBottom: '0.5rem' }}>Manage Categories</label>
-                  <div style={{ display: 'flex', gap: '0.5rem', marginBottom: '0.5rem' }}>
-                    <input type="text" placeholder="New Category" value={newCategory} onChange={e => setNewCategory(e.target.value)} style={{ flex: 1, padding: '0.4rem', borderRadius: '0.25rem', border: '1px solid var(--border-color)', fontSize: '0.875rem' }} />
-                    <button type="button" onClick={handleAddCategory} style={{ backgroundColor: 'var(--accent-color)', color: 'white', border: 'none', padding: '0 0.75rem', borderRadius: '0.25rem', cursor: 'pointer' }}>+</button>
-                  </div>
-                  <div style={{ display: 'flex', flexWrap: 'wrap', gap: '0.25rem' }}>
-                    {categories.map(c => (
-                      <div key={c.id} style={{ display: 'flex', alignItems: 'center', gap: '0.25rem', backgroundColor: 'var(--bg-secondary)', padding: '0.2rem 0.5rem', borderRadius: '1rem', fontSize: '0.75rem', border: '1px solid var(--border-color)' }}>
-                        {c.name}
-                        <button type="button" onClick={() => handleDeleteCategory(c.id)} style={{ border: 'none', background: 'none', color: 'var(--status-danger)', cursor: 'pointer', padding: 0, marginLeft: '0.2rem' }}>×</button>
-                      </div>
-                    ))}
-                  </div>
-                </div>
-              )}
-              <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '0.5rem', marginTop: '1rem' }}>
-                <button type="button" onClick={() => {
-                  setIsAddingFramework(false);
-                  setIsEditingFramework(false);
-                  setNewFramework({ name: '', fiscal_year: '2567', category: categories[0]?.name || 'มหาวิทยาลัย', description: '' });
-                }} style={{ padding: '0.6rem 1.25rem', border: 'none', borderRadius: '0.5rem', cursor: 'pointer' }}>Cancel</button>
-                <button type="submit" style={{ padding: '0.6rem 1.25rem', backgroundColor: 'var(--accent-color)', color: 'white', border: 'none', borderRadius: '0.5rem', cursor: 'pointer', fontWeight: 600 }}>
-                  {isEditingFramework ? 'Update Framework' : 'Save Framework'}
-                </button>
-              </div>
-            </form>
-          </div>
-        </div>
-      )}
-
-      {/* 2. Add/Edit KPI Modal */}
-      {isAddingKpi && (
-        <div style={{ position: 'fixed', inset: 0, backgroundColor: 'rgba(0,0,0,0.5)', display: 'flex', justifyContent: 'center', alignItems: 'center', zIndex: 1300 }}>
-          <div style={{ backgroundColor: 'var(--bg-secondary)', padding: '2.5rem', borderRadius: '1.25rem', width: '750px', boxShadow: '0 25px 50px -12px rgba(0,0,0,0.25)', maxHeight: '90vh', overflowY: 'auto', border: '1px solid var(--border-color)' }}>
-            <h3 style={{ marginTop: 0 }}>{isEditingKpi ? `Edit KPI: ${newKpi.name}` : `Add KPI to ${frameworks.find(f => f.id === selectedFrameworkId)?.name}`}</h3>
-            <form onSubmit={handleAddKpi} style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
-              <div style={{ display: 'flex', flexDirection: 'column', gap: '0.25rem' }}>
-                <label style={{ fontSize: '0.875rem', fontWeight: 600 }}>Description (Optional)</label>
-                <input type="text" value={newKpi.description} onChange={e => setNewKpi({ ...newKpi, description: e.target.value })} style={{ padding: '0.6rem', borderRadius: '0.5rem', border: '1px solid var(--border-color)' }} />
-              </div>
-              <div style={{ display: 'flex', flexDirection: 'column', gap: '0.25rem' }}>
-                <label style={{ fontSize: '0.875rem', fontWeight: 600 }}>Evidence (หลักฐาน)</label>
-                <textarea placeholder="เช่น รายงานการประชุม, ประกาศ, คำสั่ง..." value={newKpi.evidence} onChange={e => setNewKpi({ ...newKpi, evidence: e.target.value })} style={{ width: '100%', padding: '0.6rem', borderRadius: '0.5rem', border: '1px solid var(--border-color)', minHeight: '80px', fontFamily: 'inherit', resize: 'vertical' }} />
-                <div style={{ marginTop: '0.5rem', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-                  <label style={{ cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '0.3rem', fontSize: '0.75rem', color: 'var(--accent-color)', backgroundColor: 'var(--accent-light)', padding: '0.25rem 0.5rem', borderRadius: '0.25rem', fontWeight: 600 }}>
-                    <Upload size={12} /> {newKpi.evidence_name ? 'Change Evidence File' : 'Upload Evidence File'}
-                    <input type="file" style={{ display: 'none' }} onChange={e => handleEvidenceUpload(e.target.files[0])} />
-                  </label>
-                  {newKpi.evidence_name && (
-                    <div style={{ display: 'flex', alignItems: 'center', gap: '0.4rem' }}>
-                      <span style={{ fontSize: '0.7rem', color: 'var(--text-secondary)', display: 'flex', alignItems: 'center', gap: '0.2rem' }}>
-                        <FileText size={12} /> {newKpi.evidence_name}
-                      </span>
-                      <button 
-                        type="button" 
-                        onClick={() => setNewKpi(prev => ({ ...prev, evidence_path: '', evidence_name: '' }))}
-                        style={{ background: 'none', border: 'none', color: 'var(--status-danger)', cursor: 'pointer', padding: 0, display: 'flex', alignItems: 'center' }}
-                      >
-                        <X size={12} />
-                      </button>
-                    </div>
-                  )}
-                </div>
-              </div>
-              <div style={{ display: 'flex', gap: '1rem' }}>
-                <div style={{ width: '100px', display: 'flex', flexDirection: 'column', gap: '0.25rem' }}>
-                  <label style={{ fontSize: '0.875rem', fontWeight: 600 }}>Code</label>
-                  <input required type="text" placeholder="1.1" value={newKpi.code} onChange={e => setNewKpi({ ...newKpi, code: e.target.value })} style={{ padding: '0.6rem', borderRadius: '0.5rem', border: '1px solid var(--border-color)' }} />
-                </div>
-                <div style={{ flex: 1, display: 'flex', flexDirection: 'column', gap: '0.25rem' }}>
-                  <label style={{ fontSize: '0.875rem', fontWeight: 600 }}>KPI Name</label>
-                  <input required type="text" value={newKpi.name} onChange={e => setNewKpi({ ...newKpi, name: e.target.value })} style={{ padding: '0.6rem', borderRadius: '0.5rem', border: '1px solid var(--border-color)' }} />
-                </div>
-              </div>
-
-              <div style={{ backgroundColor: 'var(--bg-tertiary)', padding: '1rem', borderRadius: '0.75rem', border: '1px solid var(--border-color)' }}>
-                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1rem' }}>
-                  <label style={{ fontSize: '0.875rem', fontWeight: 700 }}>Targets (เป้าหมาย)</label>
-                  <button
-                    type="button"
-                    onClick={() => setNewKpi({ ...newKpi, targets: [...newKpi.targets, { label: '', value: 0, unit: 'บทความ' }] })}
-                    style={{ background: 'none', border: 'none', color: 'var(--accent-color)', fontSize: '0.75rem', cursor: 'pointer', fontWeight: 600, display: 'flex', alignItems: 'center', gap: '0.25rem' }}
-                  >
-                    <Plus size={14} /> Add Target
-                  </button>
-                </div>
-                <div style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem' }}>
-                  {newKpi.targets.map((t, idx) => (
-                    <div key={idx} style={{ backgroundColor: 'var(--bg-secondary)', padding: '0.75rem', borderRadius: '0.5rem', border: '1px solid var(--border-color)' }}>
-                      <div style={{ display: 'flex', gap: '0.5rem', alignItems: 'flex-end', marginBottom: '0.5rem' }}>
-                        <div style={{ flex: 1.5, display: 'flex', flexDirection: 'column', gap: '0.25rem' }}>
-                          <label style={{ fontSize: '0.7rem', fontWeight: 600, color: 'var(--text-secondary)' }}>Label</label>
-                          <input required type="text" placeholder="เช่น ขั้นต่ำ" value={t.label} onChange={e => {
-                            const nt = [...newKpi.targets]; nt[idx].label = e.target.value; setNewKpi({ ...newKpi, targets: nt });
-                          }} style={{ padding: '0.4rem', borderRadius: '0.375rem', border: '1px solid var(--border-color)', fontSize: '0.875rem' }} />
-                        </div>
-                        <div style={{ flex: 0.8, display: 'flex', flexDirection: 'column', gap: '0.25rem' }}>
-                          <label style={{ fontSize: '0.7rem', fontWeight: 600, color: 'var(--text-secondary)' }}>Value</label>
-                          <input required type="number" step="any" value={t.value} onChange={e => {
-                            const nt = [...newKpi.targets]; nt[idx].value = e.target.value; setNewKpi({ ...newKpi, targets: nt });
-                          }} style={{ padding: '0.4rem', borderRadius: '0.375rem', border: '1px solid var(--border-color)', fontSize: '0.875rem' }} />
-                        </div>
-                        <div style={{ flex: 1.2, display: 'flex', flexDirection: 'column', gap: '0.25rem' }}>
-                          <label style={{ fontSize: '0.7rem', fontWeight: 600, color: 'var(--text-secondary)' }}>Unit</label>
-                          <input required type="text" value={t.unit} onChange={e => {
-                            const nt = [...newKpi.targets]; nt[idx].unit = e.target.value; setNewKpi({ ...newKpi, targets: nt });
-                          }} style={{ padding: '0.4rem', borderRadius: '0.375rem', border: '1px solid var(--border-color)', fontSize: '0.875rem' }} />
-                        </div>
-                        <button
-                          type="button"
-                          onClick={() => {
-                            const nt = newKpi.targets.filter((_, i) => i !== idx);
-                            setNewKpi({ ...newKpi, targets: nt });
-                          }}
-                          style={{ background: 'none', border: 'none', color: 'var(--status-danger)', cursor: 'pointer', padding: '0.6rem', display: 'flex', alignItems: 'center', justifyContent: 'center', backgroundColor: 'transparent', borderRadius: '0.5rem', transition: 'all 0.2s' }}
-                          title="ลบเป้าหมาย"
-                        >
-                          <Trash2 size={18} />
-                        </button>
-                      </div>
-                      <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', marginTop: '0.25rem' }}>
-                        <label style={{ cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '0.3rem', fontSize: '0.75rem', color: 'var(--accent-color)', backgroundColor: 'var(--accent-light)', padding: '0.25rem 0.5rem', borderRadius: '0.25rem', fontWeight: 600 }}>
-                          <Upload size={12} /> {t.attachment_name ? 'Change File' : 'Upload File'}
-                          <input type="file" style={{ display: 'none' }} onChange={e => handleFileUpload(e.target.files[0], idx)} />
-                        </label>
-                        {t.attachment_name && (
-                          <div style={{ display: 'flex', alignItems: 'center', gap: '0.4rem' }}>
-                            <span style={{ fontSize: '0.7rem', color: 'var(--text-secondary)', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis', maxWidth: '250px', display: 'flex', alignItems: 'center', gap: '0.25rem' }}>
-                              <FileText size={12} /> {t.attachment_name}
-                            </span>
-                            <button 
-                              type="button" 
-                              onClick={() => {
-                                setNewKpi(prev => ({
-                                  ...prev,
-                                  targets: prev.targets.map((target, i) => 
-                                    i === idx ? { ...target, attachment_path: '', attachment_name: '' } : target
-                                  )
-                                }));
-                              }}
-                              style={{ background: 'none', border: 'none', color: 'var(--status-danger)', cursor: 'pointer', padding: 0, display: 'flex', alignItems: 'center' }}
-                            >
-                              <X size={12} />
-                            </button>
-                          </div>
-                        )}
-                      </div>
-                    </div>
-                  ))}
-                </div>
-              </div>
-
-              <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '0.5rem', marginTop: '1rem' }}>
-                <button type="button" onClick={() => {
-                  setIsAddingKpi(false);
-                  setIsEditingKpi(false);
-                  setNewKpi({ code: '', name: '', target_value: 0, unit: 'บทความ', weight: 1, description: '', evidence: '', targets: [{ label: 'เป้าหมายหลัก', value: 0, unit: 'บทความ' }] });
-                }} style={{ padding: '0.6rem 1.25rem', border: 'none', borderRadius: '0.5rem', cursor: 'pointer' }}>Cancel</button>
-                <button type="submit" style={{ padding: '0.6rem 1.25rem', backgroundColor: 'var(--accent-color)', color: 'white', border: 'none', borderRadius: '0.5rem', cursor: 'pointer', fontWeight: 600 }}>
-                  {isEditingKpi ? 'Update KPI' : 'Save KPI'}
-                </button>
-              </div>
-            </form>
-          </div>
-        </div>
-      )}
-
-      {/* 3. Targets View Modal */}
-      {targetsModal.show && (
-        <div style={{ position: 'fixed', inset: 0, backgroundColor: 'rgba(0,0,0,0.5)', display: 'flex', justifyContent: 'center', alignItems: 'center', zIndex: 1100 }}>
-          <div style={{ backgroundColor: 'var(--bg-secondary)', padding: '2rem', borderRadius: '1rem', width: '400px', boxShadow: '0 20px 25px -5px rgba(0,0,0,0.1)' }}>
-            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1.5rem' }}>
-              <h3 style={{ margin: 0 }}>เป้าหมายของ KPI</h3>
-              <button onClick={() => setTargetsModal({ show: false, targets: [], kpiName: '', evidence: '', evidence_path: '', evidence_name: '' })} style={{ background: 'none', border: 'none', cursor: 'pointer', color: 'var(--text-secondary)' }}><X size={20} /></button>
-            </div>
-            <div style={{ fontWeight: 600, color: 'var(--accent-color)', marginBottom: '0.5rem' }}>{targetsModal.kpiName}</div>
-
-            <div style={{ fontSize: '0.75rem', fontWeight: 700, color: 'var(--text-secondary)', textTransform: 'uppercase', marginBottom: '0.75rem' }}>รายการเป้าหมาย</div>
-            <div style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem' }}>
-              {targetsModal.targets.length > 0 ? (
-                targetsModal.targets.map((t, idx) => (
-                  <div key={idx} style={{ backgroundColor: 'var(--bg-tertiary)', padding: '1rem', borderRadius: '0.75rem', border: '1px solid var(--border-color)' }}>
-                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                      <div style={{ display: 'flex', flexDirection: 'column' }}>
-                        <span style={{ fontWeight: 600 }}>{t.label}</span>
-                        <span style={{ fontSize: '0.85rem', color: 'var(--text-secondary)' }}>
-                          <strong style={{ fontSize: '1.1rem', color: 'var(--text-primary)' }}>{t.value}</strong> {t.unit}
-                        </span>
-                      </div>
-                      {t.attachment_path && (
-                        <a
-                          href={`http://localhost:3001${t.attachment_path}`}
-                          target="_blank"
-                          rel="noreferrer"
-                          download
-                          style={{
-                            width: '40px',
-                            height: '40px',
-                            display: 'flex',
-                            alignItems: 'center',
-                            justifyContent: 'center',
-                            backgroundColor: 'var(--accent-light)',
-                            color: 'var(--accent-color)',
-                            borderRadius: '0.75rem',
-                            textDecoration: 'none',
-                            transition: 'all 0.2s'
-                          }}
-                          title={`Download: ${t.attachment_name}`}
-                          onMouseOver={e => {
-                            e.currentTarget.style.backgroundColor = 'var(--accent-color)';
-                            e.currentTarget.style.color = 'white';
-                          }}
-                          onMouseOut={e => {
-                            e.currentTarget.style.backgroundColor = 'var(--accent-light)';
-                            e.currentTarget.style.color = 'var(--accent-color)';
-                          }}
-                        >
-                          <Download size={20} />
-                        </a>
-                      )}
-                    </div>
-                  </div>
-                ))
-              ) : (
-                <div style={{ textAlign: 'center', color: 'var(--text-secondary)', padding: '1rem' }}>ไม่มีข้อมูลเป้าหมายเพิ่มเติม</div>
-              )}
-            </div>
-            <button
-              onClick={() => setTargetsModal({ show: false, targets: [], kpiName: '' })}
-              style={{ width: '100%', marginTop: '1.5rem', padding: '0.75rem', backgroundColor: 'var(--accent-color)', color: 'white', border: 'none', borderRadius: '0.5rem', cursor: 'pointer', fontWeight: 600 }}
-            >
-              ปิดหน้าต่าง
-            </button>
-          </div>
-        </div>
-      )}
-
-      {/* 4. Mapping Modal (The Inbox Action) */}
-      {mappingModal.show && (
-        <div style={{ position: 'fixed', inset: 0, backgroundColor: 'rgba(0,0,0,0.6)', backdropFilter: 'blur(4px)', display: 'flex', justifyContent: 'center', alignItems: 'center', zIndex: 1200 }}>
-          <div style={{ backgroundColor: 'var(--bg-secondary)', borderRadius: '1.25rem', width: '800px', maxHeight: '85vh', display: 'flex', flexDirection: 'column', boxShadow: '0 25px 50px -12px rgba(0,0,0,0.25)', border: '1px solid var(--border-color)', animation: 'fadeIn 0.2s ease-out' }}>
-            <div style={{ padding: '1.5rem', borderBottom: '1px solid var(--border-color)', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-              <div>
-                <h3 style={{ margin: 0 }}>Assign to KPI</h3>
-                <p style={{ margin: '0.25rem 0 0 0', color: 'var(--text-secondary)', fontSize: '0.85rem' }}>Mapping item: <strong>{mappingModal.item?.title}</strong></p>
-              </div>
-              <button onClick={() => setMappingModal({ show: false, item: null })} style={{ background: 'var(--bg-tertiary)', border: 'none', borderRadius: '50%', width: '32px', height: '32px', display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer', color: 'var(--text-secondary)' }}><X size={20} /></button>
-            </div>
-
-            <div style={{ padding: '1rem 1.5rem', borderBottom: '1px solid var(--border-color)', backgroundColor: 'var(--bg-tertiary)' }}>
-              <div style={{ position: 'relative', width: '100%' }}>
-                <Search style={{ position: 'absolute', left: '0.75rem', top: '50%', transform: 'translateY(-50%)', color: 'var(--text-secondary)' }} size={18} />
-                <input
-                  type="text"
-                  placeholder="ค้นหาชื่อ KPI, รหัส หรือ Framework..."
-                  style={{ width: '100%', padding: '0.75rem 1rem 0.75rem 2.5rem', borderRadius: '0.75rem', border: '1px solid var(--border-color)', backgroundColor: 'var(--bg-secondary)', fontSize: '0.9rem' }}
-                />
-              </div>
-            </div>
-
-            <div style={{ flex: 1, overflowY: 'auto', padding: '1.5rem', display: 'flex', flexDirection: 'column', gap: '2rem' }}>
-              {years.map(year => (
-                <div key={year}>
-                  <div style={{ display: 'flex', alignItems: 'center', gap: '1rem', marginBottom: '1rem' }}>
-                    <div style={{ padding: '0.25rem 0.75rem', backgroundColor: 'var(--accent-color)', color: 'white', borderRadius: '0.5rem', fontSize: '0.85rem', fontWeight: 700 }}>ปีงบประมาณ {year}</div>
-                    <div style={{ flex: 1, height: '1px', backgroundColor: 'var(--border-color)' }}></div>
-                  </div>
-
-                  <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
-                    {frameworks.filter(fw => fw.fiscal_year === year).map(fw => (
-                      <div key={fw.id} style={{ border: '1px solid var(--border-color)', borderRadius: '1rem', overflow: 'hidden', backgroundColor: 'var(--bg-secondary)' }}>
-                        <div style={{ padding: '0.75rem 1rem', backgroundColor: 'var(--bg-tertiary)', borderBottom: '1px solid var(--border-color)', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                          <div style={{ fontWeight: 700, color: 'var(--text-primary)', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-                            <Settings size={14} style={{ color: 'var(--accent-color)' }} /> {fw.name}
-                            <span style={{ fontSize: '0.7rem', color: 'var(--text-secondary)', fontWeight: 400 }}>({fw.category})</span>
-                          </div>
-                          <button
-                            onClick={() => {
-                              setNewKpi({ code: '', name: '', target_value: 0, unit: 'บทความ', weight: 1, description: '', evidence: '', targets: [{ label: 'เป้าหมายหลัก', value: 0, unit: 'บทความ' }] });
-                              setSelectedFrameworkId(fw.id);
-                              setIsEditingKpi(false);
-                              setIsAddingKpi(true);
-                            }}
-                            style={{ background: 'none', border: 'none', color: 'var(--accent-color)', cursor: 'pointer', fontSize: '0.75rem', fontWeight: 600, display: 'flex', alignItems: 'center', gap: '0.25rem' }}
-                          >
-                            <Plus size={14} /> Add KPI
-                          </button>
-                        </div>
-
-                        <div style={{ display: 'flex', flexDirection: 'column' }}>
-                          {kpis.filter(k => k.framework_id === fw.id).length > 0 ? (
-                            kpis.filter(k => k.framework_id === fw.id).map(kpi => (
-                              <div key={kpi.id} style={{ padding: '0.75rem 1rem', display: 'flex', justifyContent: 'space-between', alignItems: 'center', borderBottom: '1px solid var(--border-color)', transition: 'background-color 0.2s' }}>
-                                <div style={{ flex: 1 }}>
-                                  <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-                                    <span style={{ fontWeight: 700, color: 'var(--accent-color)', fontSize: '0.85rem' }}>{kpi.code}</span>
-                                    <span style={{ fontWeight: 500, fontSize: '0.9rem' }}>{kpi.name}</span>
-                                  </div>
-                                  <div style={{ fontSize: '0.75rem', color: 'var(--text-secondary)', marginTop: '0.1rem' }}>{kpi.description || 'No description'}</div>
-                                </div>
-                                <div style={{ display: 'flex', gap: '0.5rem', alignItems: 'center' }}>
-                                  <button
-                                    onClick={() => {
-                                      setNewKpi({ ...kpi, targets: kpi.targets || [{ label: 'เป้าหมายหลัก', value: kpi.target_value, unit: kpi.unit }] });
-                                      setEditingKpiId(kpi.id);
-                                      setIsEditingKpi(true);
-                                      setIsAddingKpi(true);
-                                    }}
-                                    style={{ background: 'none', border: 'none', color: 'var(--text-secondary)', cursor: 'pointer', padding: '0.4rem' }}
-                                  ><Settings size={14} /></button>
-                                  <button
-                                    onClick={() => handleMap(mappingModal.item, kpi.id).then(() => setMappingModal({ show: false, item: null }))}
-                                    style={{ backgroundColor: 'var(--status-success)', color: 'white', border: 'none', padding: '0.4rem 0.8rem', borderRadius: '0.4rem', cursor: 'pointer', fontSize: '0.75rem', fontWeight: 600 }}
-                                  >
-                                    Map Result
-                                  </button>
-                                </div>
-                              </div>
-                            ))
-                          ) : (
-                            <div style={{ padding: '1rem', textAlign: 'center', color: 'var(--text-secondary)', fontSize: '0.85rem' }}>ยังไม่มี KPI ใน Framework นี้</div>
-                          )}
-                        </div>
-                      </div>
-                    ))}
-                  </div>
-                </div>
-              ))}
-            </div>
-
-            <div style={{ padding: '1.5rem', borderTop: '1px solid var(--border-color)', display: 'flex', justifyContent: 'flex-end' }}>
-              <button
-                onClick={() => setMappingModal({ show: false, item: null })}
-                style={{ padding: '0.75rem 1.5rem', backgroundColor: 'var(--bg-tertiary)', border: 'none', borderRadius: '0.5rem', cursor: 'pointer', fontWeight: 600 }}
-              >
-                Close
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
 
       {/* 5. Premium Confirm Dialog */}
       {confirmDialog.show && (
@@ -1624,6 +1547,67 @@ const QAMetrics = ({ setActiveMenu }) => {
           </div>
         </div>
       )}
+      
+      {/* 1.5 Add/Edit Topic Modal */}
+      {isAddingTopic && (
+        <div style={{ position: 'fixed', inset: 0, backgroundColor: 'rgba(0,0,0,0.5)', display: 'flex', justifyContent: 'center', alignItems: 'center', zIndex: 1100 }}>
+          <div style={{ backgroundColor: 'var(--bg-secondary)', padding: '2.5rem', borderRadius: '1.25rem', width: '600px', boxShadow: '0 25px 50px -12px rgba(0,0,0,0.25)', border: '1px solid var(--border-color)' }}>
+            <h3 style={{ marginTop: 0 }}>{isEditingTopic ? `Edit Topic: ${newTopic.name}` : `Add Topic to ${frameworks.find(f => f.id === viewingFrameworkId)?.name}`}</h3>
+            <form onSubmit={handleAddTopic} style={{ display: 'flex', flexDirection: 'column', gap: '1.25rem' }}>
+              <div style={{ display: 'flex', gap: '1rem' }}>
+                <div style={{ width: '120px', display: 'flex', flexDirection: 'column', gap: '0.25rem' }}>
+                  <label style={{ fontSize: '0.875rem', fontWeight: 600 }}>Topic Code</label>
+                  <input required type="text" placeholder="เช่น 1, 2, A" value={newTopic.code} onChange={e => setNewTopic({ ...newTopic, code: e.target.value })} style={{ padding: '0.6rem', borderRadius: '0.5rem', border: '1px solid var(--border-color)' }} />
+                </div>
+                <div style={{ flex: 1, display: 'flex', flexDirection: 'column', gap: '0.25rem' }}>
+                  <label style={{ fontSize: '0.875rem', fontWeight: 600 }}>Topic Name</label>
+                  <input required type="text" placeholder="เช่น ผลสัมฤทธิ์ด้านการวิจัย" value={newTopic.name} onChange={e => setNewTopic({ ...newTopic, name: e.target.value })} style={{ padding: '0.6rem', borderRadius: '0.5rem', border: '1px solid var(--border-color)' }} />
+                </div>
+              </div>
+
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '0.25rem' }}>
+                <label style={{ fontSize: '0.875rem', fontWeight: 600 }}>Description (Optional)</label>
+                <textarea value={newTopic.description} onChange={e => setNewTopic({ ...newTopic, description: e.target.value })} style={{ padding: '0.6rem', borderRadius: '0.5rem', border: '1px solid var(--border-color)', minHeight: '60px', fontFamily: 'inherit' }} />
+              </div>
+
+              <div style={{ backgroundColor: 'var(--bg-tertiary)', padding: '1.25rem', borderRadius: '1rem', border: '1px solid var(--border-color)' }}>
+                <label style={{ fontSize: '0.875rem', fontWeight: 700, display: 'block', marginBottom: '0.75rem', color: 'var(--accent-color)' }}>Evidence (หลักฐานที่ต้องใช้)</label>
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem' }}>
+                  <textarea 
+                    placeholder="ระบุรายละเอียดหลักฐานที่ต้องใช้สำหรับตัวชี้วัดในหัวข้อนี้..." 
+                    value={newTopic.evidence} 
+                    onChange={e => setNewTopic({ ...newTopic, evidence: e.target.value })} 
+                    style={{ width: '100%', padding: '0.75rem', borderRadius: '0.5rem', border: '1px solid var(--border-color)', minHeight: '100px', fontFamily: 'inherit', fontSize: '0.9rem' }} 
+                  />
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
+                    <label style={{ cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '0.4rem', fontSize: '0.8rem', color: 'var(--accent-color)', backgroundColor: 'var(--accent-light)', padding: '0.4rem 0.75rem', borderRadius: '0.5rem', fontWeight: 600 }}>
+                      <Upload size={14} /> {newTopic.evidence_name ? 'Change Evidence File' : 'Upload Evidence Template'}
+                      <input type="file" style={{ display: 'none' }} onChange={e => handleTopicFileUpload(e.target.files[0])} />
+                    </label>
+                    {newTopic.evidence_name && (
+                      <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', fontSize: '0.8rem', color: 'var(--text-secondary)' }}>
+                        <FileText size={14} /> {newTopic.evidence_name}
+                        <button type="button" onClick={() => setNewTopic(prev => ({ ...prev, evidence_path: '', evidence_name: '' }))} style={{ background: 'none', border: 'none', color: 'var(--status-danger)', cursor: 'pointer', padding: 0 }}><X size={14} /></button>
+                      </div>
+                    )}
+                  </div>
+                </div>
+              </div>
+
+              <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '0.75rem', marginTop: '0.5rem' }}>
+                <button type="button" onClick={() => {
+                  setIsAddingTopic(false);
+                  setIsEditingTopic(false);
+                  setNewTopic({ code: '', name: '', description: '', evidence: '', evidence_path: '', evidence_name: '' });
+                }} style={{ padding: '0.6rem 1.5rem', border: 'none', borderRadius: '0.5rem', cursor: 'pointer', fontWeight: 600 }}>Cancel</button>
+                <button type="submit" style={{ padding: '0.6rem 1.5rem', backgroundColor: 'var(--accent-color)', color: 'white', border: 'none', borderRadius: '0.5rem', cursor: 'pointer', fontWeight: 600, boxShadow: '0 4px 6px -1px rgba(59, 130, 246, 0.3)' }}>
+                  {isEditingTopic ? 'Update Topic' : 'Save Topic'}
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
 
       {/* 2. Add/Edit KPI Modal */}
       {isAddingKpi && (
@@ -1632,47 +1616,39 @@ const QAMetrics = ({ setActiveMenu }) => {
             <h3 style={{ marginTop: 0 }}>{isEditingKpi ? `Edit KPI: ${newKpi.name}` : `Add KPI to ${frameworks.find(f => f.id === selectedFrameworkId)?.name}`}</h3>
             <form onSubmit={handleAddKpi} style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
               <div style={{ display: 'flex', flexDirection: 'column', gap: '0.25rem' }}>
-                <label style={{ fontSize: '0.875rem', fontWeight: 600 }}>Description (Optional)</label>
-                <input type="text" value={newKpi.description} onChange={e => setNewKpi({ ...newKpi, description: e.target.value })} style={{ padding: '0.6rem', borderRadius: '0.5rem', border: '1px solid var(--border-color)' }} />
+                <label style={{ fontSize: '0.875rem', fontWeight: 600 }}>Parent Topic (หัวข้อหลัก)</label>
+                <select 
+                  required 
+                  value={newKpi.topic_id} 
+                  onChange={e => setNewKpi({ ...newKpi, topic_id: e.target.value })} 
+                  style={{ padding: '0.6rem', borderRadius: '0.5rem', border: '1px solid var(--border-color)', backgroundColor: 'var(--bg-secondary)' }}
+                >
+                  <option value="">-- เลือกหัวข้อหลัก --</option>
+                  {topics.filter(t => t.framework_id === selectedFrameworkId).map(t => (
+                    <option key={t.id} value={t.id}>{t.code} - {t.name}</option>
+                  ))}
+                </select>
               </div>
-              <div style={{ display: 'flex', flexDirection: 'column', gap: '0.25rem' }}>
-                <label style={{ fontSize: '0.875rem', fontWeight: 600 }}>Evidence (หลักฐาน)</label>
-                <textarea placeholder="เช่น รายงานการประชุม, ประกาศ, คำสั่ง..." value={newKpi.evidence} onChange={e => setNewKpi({ ...newKpi, evidence: e.target.value })} style={{ width: '100%', padding: '0.6rem', borderRadius: '0.5rem', border: '1px solid var(--border-color)', minHeight: '80px', fontFamily: 'inherit', resize: 'vertical' }} />
-                <div style={{ marginTop: '0.5rem', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-                  <label style={{ cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '0.3rem', fontSize: '0.75rem', color: 'var(--accent-color)', backgroundColor: 'var(--accent-light)', padding: '0.25rem 0.5rem', borderRadius: '0.25rem', fontWeight: 600 }}>
-                    <Upload size={12} /> {newKpi.evidence_name ? 'Change Evidence File' : 'Upload Evidence File'}
-                    <input type="file" style={{ display: 'none' }} onChange={e => handleEvidenceUpload(e.target.files[0])} />
-                  </label>
-                  {newKpi.evidence_name && (
-                    <div style={{ display: 'flex', alignItems: 'center', gap: '0.4rem' }}>
-                      <span style={{ fontSize: '0.7rem', color: 'var(--text-secondary)', display: 'flex', alignItems: 'center', gap: '0.2rem' }}>
-                        <FileText size={12} /> {newKpi.evidence_name}
-                      </span>
-                      <button 
-                        type="button" 
-                        onClick={() => setNewKpi(prev => ({ ...prev, evidence_path: '', evidence_name: '' }))}
-                        style={{ background: 'none', border: 'none', color: 'var(--status-danger)', cursor: 'pointer', padding: 0, display: 'flex', alignItems: 'center' }}
-                      >
-                        <X size={12} />
-                      </button>
-                    </div>
-                  )}
-                </div>
-              </div>
+
               <div style={{ display: 'flex', gap: '1rem' }}>
-                <div style={{ width: '100px', display: 'flex', flexDirection: 'column', gap: '0.25rem' }}>
-                  <label style={{ fontSize: '0.875rem', fontWeight: 600 }}>Code</label>
-                  <input required type="text" placeholder="1.1" value={newKpi.code} onChange={e => setNewKpi({ ...newKpi, code: e.target.value })} style={{ padding: '0.6rem', borderRadius: '0.5rem', border: '1px solid var(--border-color)' }} />
+                <div style={{ width: '120px', display: 'flex', flexDirection: 'column', gap: '0.25rem' }}>
+                  <label style={{ fontSize: '0.875rem', fontWeight: 600 }}>KPI Code</label>
+                  <input required type="text" placeholder="เช่น 1.1, 1.2" value={newKpi.code} onChange={e => setNewKpi({ ...newKpi, code: e.target.value })} style={{ padding: '0.6rem', borderRadius: '0.5rem', border: '1px solid var(--border-color)' }} />
                 </div>
                 <div style={{ flex: 1, display: 'flex', flexDirection: 'column', gap: '0.25rem' }}>
                   <label style={{ fontSize: '0.875rem', fontWeight: 600 }}>KPI Name</label>
-                  <input required type="text" value={newKpi.name} onChange={e => setNewKpi({ ...newKpi, name: e.target.value })} style={{ padding: '0.6rem', borderRadius: '0.5rem', border: '1px solid var(--border-color)' }} />
+                  <input required type="text" placeholder="เช่น จำนวนบทความวิจัยที่ได้รับการตีพิมพ์" value={newKpi.name} onChange={e => setNewKpi({ ...newKpi, name: e.target.value })} style={{ padding: '0.6rem', borderRadius: '0.5rem', border: '1px solid var(--border-color)' }} />
                 </div>
+              </div>
+
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '0.25rem' }}>
+                <label style={{ fontSize: '0.875rem', fontWeight: 600 }}>Description (Optional)</label>
+                <textarea value={newKpi.description} onChange={e => setNewKpi({ ...newKpi, description: e.target.value })} style={{ padding: '0.6rem', borderRadius: '0.5rem', border: '1px solid var(--border-color)', minHeight: '60px', fontFamily: 'inherit' }} />
               </div>
 
               <div style={{ backgroundColor: 'var(--bg-tertiary)', padding: '1rem', borderRadius: '0.75rem', border: '1px solid var(--border-color)' }}>
                 <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1rem' }}>
-                  <label style={{ fontSize: '0.875rem', fontWeight: 700 }}>Targets (เป้าหมาย)</label>
+                  <label style={{ fontSize: '0.875rem', fontWeight: 700 }}>Targets (เป้าหมายของตัวชี้วัด)</label>
                   <button
                     type="button"
                     onClick={() => setNewKpi({ ...newKpi, targets: [...newKpi.targets, { label: '', value: 0, unit: 'บทความ' }] })}
@@ -1687,34 +1663,65 @@ const QAMetrics = ({ setActiveMenu }) => {
                       <div style={{ display: 'flex', gap: '0.5rem', alignItems: 'flex-end', marginBottom: '0.5rem' }}>
                         <div style={{ flex: 1.5, display: 'flex', flexDirection: 'column', gap: '0.25rem' }}>
                           <label style={{ fontSize: '0.7rem', fontWeight: 600, color: 'var(--text-secondary)' }}>Label</label>
-                          <input required type="text" placeholder="เช่น ขั้นต่ำ" value={t.label} onChange={e => {
+                          <input required type="text" placeholder="เช่น ขั้นต่ำ, ดีมาก" value={t.label} onChange={e => {
                             const nt = [...newKpi.targets]; nt[idx].label = e.target.value; setNewKpi({ ...newKpi, targets: nt });
                           }} style={{ padding: '0.4rem', borderRadius: '0.375rem', border: '1px solid var(--border-color)', fontSize: '0.875rem' }} />
                         </div>
-                        <div style={{ flex: 0.8, display: 'flex', flexDirection: 'column', gap: '0.25rem' }}>
-                          <label style={{ fontSize: '0.7rem', fontWeight: 600, color: 'var(--text-secondary)' }}>Value</label>
-                          <input required type="number" step="any" value={t.value} onChange={e => {
-                            const nt = [...newKpi.targets]; nt[idx].value = e.target.value; setNewKpi({ ...newKpi, targets: nt });
-                          }} style={{ padding: '0.4rem', borderRadius: '0.375rem', border: '1px solid var(--border-color)', fontSize: '0.875rem' }} />
-                        </div>
+
+                        {t.unit !== 'ไฟล์' && (
+                          <div style={{ width: '80px', display: 'flex', flexDirection: 'column', gap: '0.25rem' }}>
+                            <label style={{ fontSize: '0.7rem', fontWeight: 600, color: 'var(--text-secondary)' }}>Value</label>
+                            <input required type="number" step="any" value={t.value} onChange={e => {
+                              const nt = [...newKpi.targets]; nt[idx].value = e.target.value; setNewKpi({ ...newKpi, targets: nt });
+                            }} style={{ padding: '0.4rem', borderRadius: '0.375rem', border: '1px solid var(--border-color)', fontSize: '0.875rem', textAlign: 'center' }} />
+                          </div>
+                        )}
+
                         <div style={{ flex: 1.2, display: 'flex', flexDirection: 'column', gap: '0.25rem' }}>
                           <label style={{ fontSize: '0.7rem', fontWeight: 600, color: 'var(--text-secondary)' }}>Unit</label>
-                          <input required type="text" value={t.unit} onChange={e => {
-                            const nt = [...newKpi.targets]; nt[idx].unit = e.target.value; setNewKpi({ ...newKpi, targets: nt });
-                          }} style={{ padding: '0.4rem', borderRadius: '0.375rem', border: '1px solid var(--border-color)', fontSize: '0.875rem' }} />
+                          <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                            <input 
+                              required 
+                              type="text" 
+                              disabled={t.unit === 'ไฟล์'}
+                              value={t.unit} 
+                              onChange={e => {
+                                const nt = [...newKpi.targets]; nt[idx].unit = e.target.value; setNewKpi({ ...newKpi, targets: nt });
+                              }} 
+                              style={{ flex: 1, padding: '0.4rem', borderRadius: '0.375rem', border: '1px solid var(--border-color)', fontSize: '0.875rem', opacity: t.unit === 'ไฟล์' ? 0.7 : 1 }} 
+                            />
+                            <label style={{ display: 'flex', alignItems: 'center', gap: '0.25rem', fontSize: '0.7rem', whiteSpace: 'nowrap', cursor: 'pointer', backgroundColor: 'var(--bg-tertiary)', padding: '0.4rem', borderRadius: '0.375rem', border: '1px solid var(--border-color)' }}>
+                              <input 
+                                type="checkbox" 
+                                checked={t.unit === 'ไฟล์'} 
+                                onChange={e => {
+                                  const nt = [...newKpi.targets];
+                                  if (e.target.checked) {
+                                    nt[idx].unit = 'ไฟล์';
+                                    nt[idx].value = 0;
+                                  } else {
+                                    nt[idx].unit = 'บทความ';
+                                  }
+                                  setNewKpi({ ...newKpi, targets: nt });
+                                }} 
+                              />
+                              เป็นไฟล์
+                            </label>
+                          </div>
                         </div>
+
                         <button
                           type="button"
                           onClick={() => {
                             const nt = newKpi.targets.filter((_, i) => i !== idx);
                             setNewKpi({ ...newKpi, targets: nt });
                           }}
-                          style={{ background: 'none', border: 'none', color: 'var(--status-danger)', cursor: 'pointer', padding: '0.6rem', display: 'flex', alignItems: 'center', justifyContent: 'center', backgroundColor: 'transparent', borderRadius: '0.5rem', transition: 'all 0.2s' }}
-                          title="ลบเป้าหมาย"
+                          style={{ background: 'none', border: 'none', color: 'var(--status-danger)', cursor: 'pointer', padding: '0.6rem', display: 'flex', alignItems: 'center', justifyContent: 'center' }}
                         >
                           <Trash2 size={18} />
                         </button>
                       </div>
+
                       <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', marginTop: '0.25rem' }}>
                         <label style={{ cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '0.3rem', fontSize: '0.75rem', color: 'var(--accent-color)', backgroundColor: 'var(--accent-light)', padding: '0.25rem 0.5rem', borderRadius: '0.25rem', fontWeight: 600 }}>
                           <Upload size={12} /> {t.attachment_name ? 'Change File' : 'Upload File'}
@@ -1735,10 +1742,8 @@ const QAMetrics = ({ setActiveMenu }) => {
                                   )
                                 }));
                               }}
-                              style={{ background: 'none', border: 'none', color: 'var(--status-danger)', cursor: 'pointer', padding: 0, display: 'flex', alignItems: 'center' }}
-                            >
-                              <X size={12} />
-                            </button>
+                              style={{ background: 'none', border: 'none', color: 'var(--status-danger)', cursor: 'pointer', padding: 0 }}
+                            ><X size={12} /></button>
                           </div>
                         )}
                       </div>
@@ -1747,13 +1752,13 @@ const QAMetrics = ({ setActiveMenu }) => {
                 </div>
               </div>
 
-              <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '0.5rem', marginTop: '1rem' }}>
+              <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '0.75rem', marginTop: '1rem' }}>
                 <button type="button" onClick={() => {
                   setIsAddingKpi(false);
                   setIsEditingKpi(false);
-                  setNewKpi({ code: '', name: '', target_value: 0, unit: 'บทความ', weight: 1, description: '', evidence: '', targets: [{ label: 'เป้าหมายหลัก', value: 0, unit: 'บทความ' }] });
-                }} style={{ padding: '0.6rem 1.25rem', border: 'none', borderRadius: '0.5rem', cursor: 'pointer' }}>Cancel</button>
-                <button type="submit" style={{ padding: '0.6rem 1.25rem', backgroundColor: 'var(--accent-color)', color: 'white', border: 'none', borderRadius: '0.5rem', cursor: 'pointer', fontWeight: 600 }}>
+                  setNewKpi({ topic_id: '', code: '', name: '', target_value: 0, unit: 'บทความ', weight: 1, description: '', targets: [{ label: 'เป้าหมายหลัก', value: 0, unit: 'บทความ' }] });
+                }} style={{ padding: '0.6rem 1.5rem', border: 'none', borderRadius: '0.5rem', cursor: 'pointer', fontWeight: 600 }}>Cancel</button>
+                <button type="submit" style={{ padding: '0.6rem 1.5rem', backgroundColor: 'var(--accent-color)', color: 'white', border: 'none', borderRadius: '0.5rem', cursor: 'pointer', fontWeight: 600 }}>
                   {isEditingKpi ? 'Update KPI' : 'Save KPI'}
                 </button>
               </div>
@@ -1765,7 +1770,7 @@ const QAMetrics = ({ setActiveMenu }) => {
       {/* 3. Targets View Modal */}
       {targetsModal.show && (
         <div style={{ position: 'fixed', inset: 0, backgroundColor: 'rgba(0,0,0,0.5)', display: 'flex', justifyContent: 'center', alignItems: 'center', zIndex: 1100 }}>
-          <div style={{ backgroundColor: 'var(--bg-secondary)', padding: '2rem', borderRadius: '1rem', width: '400px', boxShadow: '0 20px 25px -5px rgba(0,0,0,0.1)' }}>
+          <div style={{ backgroundColor: 'var(--bg-secondary)', padding: '2rem', borderRadius: '1rem', width: '600px', boxShadow: '0 20px 25px -5px rgba(0,0,0,0.1)' }}>
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1.5rem' }}>
               <h3 style={{ margin: 0 }}>เป้าหมายของ KPI</h3>
               <button onClick={() => setTargetsModal({ show: false, targets: [], kpiName: '', evidence: '', evidence_path: '', evidence_name: '' })} style={{ background: 'none', border: 'none', cursor: 'pointer', color: 'var(--text-secondary)' }}><X size={20} /></button>
@@ -1927,7 +1932,7 @@ const QAMetrics = ({ setActiveMenu }) => {
                           </div>
                           <button
                             onClick={() => {
-                              setNewKpi({ code: '', name: '', target_value: 0, unit: 'บทความ', weight: 1, description: '', evidence: '', targets: [{ label: 'เป้าหมายหลัก', value: 0, unit: 'บทความ' }] });
+                              setNewKpi({ topic_id: '', code: '', name: '', target_value: 0, unit: 'บทความ', weight: 1, description: '', targets: [{ label: 'เป้าหมายหลัก', value: 0, unit: 'บทความ' }] });
                               setSelectedFrameworkId(fw.id);
                               setIsEditingKpi(false);
                               setIsAddingKpi(true);

@@ -21,20 +21,32 @@ db.serialize(() => {
     created_at DATETIME DEFAULT CURRENT_TIMESTAMP
   )`);
 
+  // KPI Topics (Grouping level between Framework and KPI)
+  db.run(`CREATE TABLE IF NOT EXISTS kpi_topics (
+    id TEXT PRIMARY KEY,
+    framework_id TEXT,
+    code TEXT NOT NULL,
+    name TEXT NOT NULL,
+    description TEXT,
+    evidence TEXT,
+    evidence_path TEXT,
+    evidence_name TEXT,
+    FOREIGN KEY(framework_id) REFERENCES kpi_frameworks(id)
+  )`);
+
   // KPIs
   db.run(`CREATE TABLE IF NOT EXISTS kpis (
     id TEXT PRIMARY KEY,
     framework_id TEXT,
+    topic_id TEXT,
     code TEXT NOT NULL,
     name TEXT NOT NULL,
     target_value REAL,
     unit TEXT, -- e.g. counts, bath, people
     weight REAL,
     description TEXT,
-    evidence TEXT,
-    evidence_path TEXT,
-    evidence_name TEXT,
-    FOREIGN KEY(framework_id) REFERENCES kpi_frameworks(id)
+    FOREIGN KEY(framework_id) REFERENCES kpi_frameworks(id),
+    FOREIGN KEY(topic_id) REFERENCES kpi_topics(id)
   )`);
 
   // KPI Targets (Multiple targets per KPI)
@@ -98,9 +110,10 @@ db.serialize(() => {
   });
 
   // Migration: Add category column if it doesn't exist
-  db.run("ALTER TABLE kpi_frameworks ADD COLUMN category TEXT DEFAULT 'ทั่วไป'", (err) => {
-    // If error, column probably exists or table just created
-  });
+  db.run("ALTER TABLE kpi_frameworks ADD COLUMN category TEXT DEFAULT 'ทั่วไป'", (err) => {});
+  
+  // Migration: Add topic_id to kpis if it doesn't exist
+  db.run("ALTER TABLE kpis ADD COLUMN topic_id TEXT", (err) => {});
 
   // Seed initial frameworks if empty
   db.get("SELECT COUNT(*) as count FROM kpi_frameworks", (err, row) => {

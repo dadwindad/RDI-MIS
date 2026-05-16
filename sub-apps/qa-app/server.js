@@ -50,6 +50,53 @@ app.get('/api/qa/kpis', (req, res) => {
   });
 });
 
+// Topic Management
+app.get('/api/qa/topics', (req, res) => {
+  const { framework_id } = req.query;
+  let query = "SELECT * FROM kpi_topics";
+  let params = [];
+  if (framework_id) {
+    query += " WHERE framework_id = ?";
+    params.push(framework_id);
+  }
+  db.all(query, params, (err, rows) => {
+    if (err) return res.status(500).json({ error: err.message });
+    res.json(rows);
+  });
+});
+
+app.post('/api/qa/topics', requireAuth, (req, res) => {
+  const { framework_id, code, name, description, evidence, evidence_path, evidence_name } = req.body;
+  const id = 'TOPIC-' + Date.now();
+  db.run(
+    "INSERT INTO kpi_topics (id, framework_id, code, name, description, evidence, evidence_path, evidence_name) VALUES (?, ?, ?, ?, ?, ?, ?, ?)",
+    [id, framework_id, code, name, description, evidence, evidence_path, evidence_name],
+    function(err) {
+      if (err) return res.status(500).json({ error: err.message });
+      res.status(201).json({ success: true, id });
+    }
+  );
+});
+
+app.put('/api/qa/topics/:id', requireAuth, (req, res) => {
+  const { code, name, description, evidence, evidence_path, evidence_name } = req.body;
+  db.run(
+    "UPDATE kpi_topics SET code=?, name=?, description=?, evidence=?, evidence_path=?, evidence_name=? WHERE id=?",
+    [code, name, description, evidence, evidence_path, evidence_name, req.params.id],
+    function(err) {
+      if (err) return res.status(500).json({ error: err.message });
+      res.json({ success: true });
+    }
+  );
+});
+
+app.delete('/api/qa/topics/:id', requireAuth, (req, res) => {
+  db.run("DELETE FROM kpi_topics WHERE id = ?", [req.params.id], function(err) {
+    if (err) return res.status(500).json({ error: err.message });
+    res.json({ success: true });
+  });
+});
+
 app.post('/api/qa/frameworks', requireAuth, (req, res) => {
   const { name, fiscal_year, category, description } = req.body;
   const id = 'FW-' + Date.now();
@@ -123,12 +170,12 @@ app.post('/api/qa/upload', requireAuth, upload.single('file'), (req, res) => {
 app.use('/uploads', express.static(uploadDir));
 
 app.post('/api/qa/kpis', requireAuth, (req, res) => {
-  const { framework_id, code, name, target_value, unit, weight, description, evidence, evidence_path, evidence_name, targets } = req.body;
+  const { framework_id, topic_id, code, name, target_value, unit, weight, description, targets } = req.body;
   const id = 'KPI-' + Date.now();
   db.serialize(() => {
     db.run(
-      "INSERT INTO kpis (id, framework_id, code, name, target_value, unit, weight, description, evidence, evidence_path, evidence_name) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)",
-      [id, framework_id, code, name, target_value, unit, weight, description, evidence, evidence_path, evidence_name]
+      "INSERT INTO kpis (id, framework_id, topic_id, code, name, target_value, unit, weight, description) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)",
+      [id, framework_id, topic_id, code, name, target_value, unit, weight, description]
     );
 
     if (targets && Array.isArray(targets)) {
@@ -144,13 +191,13 @@ app.post('/api/qa/kpis', requireAuth, (req, res) => {
 });
 
 app.put('/api/qa/kpis/:id', requireAuth, (req, res) => {
-  const { code, name, target_value, unit, weight, description, evidence, evidence_path, evidence_name, targets } = req.body;
+  const { topic_id, code, name, target_value, unit, weight, description, targets } = req.body;
   const kpiId = req.params.id;
 
   db.serialize(() => {
     db.run(
-      "UPDATE kpis SET code=?, name=?, target_value=?, unit=?, weight=?, description=?, evidence=?, evidence_path=?, evidence_name=? WHERE id=?",
-      [code, name, target_value, unit, weight, description, evidence, evidence_path, evidence_name, kpiId]
+      "UPDATE kpis SET topic_id=?, code=?, name=?, target_value=?, unit=?, weight=?, description=? WHERE id=?",
+      [topic_id, code, name, target_value, unit, weight, description, kpiId]
     );
 
     db.run("DELETE FROM kpi_targets WHERE kpi_id = ?", [kpiId]);
@@ -163,6 +210,21 @@ app.put('/api/qa/kpis/:id', requireAuth, (req, res) => {
       stmt.finalize();
     }
 
+    res.json({ success: true });
+  });
+});
+
+app.patch('/api/qa/kpis/:id', requireAuth, (req, res) => {
+  const updates = req.body;
+  const kpiId = req.params.id;
+  const fields = Object.keys(updates);
+  if (fields.length === 0) return res.status(400).json({ error: 'No fields to update' });
+
+  const setClause = fields.map(f => `${f} = ?`).join(', ');
+  const values = [...Object.values(updates), kpiId];
+
+  db.run(`UPDATE kpis SET ${setClause} WHERE id = ?`, values, function(err) {
+    if (err) return res.status(500).json({ error: err.message });
     res.json({ success: true });
   });
 });
