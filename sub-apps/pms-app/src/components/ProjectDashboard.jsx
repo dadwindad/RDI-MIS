@@ -25,6 +25,7 @@ const ProjectDashboard = () => {
   // States สำหรับ Filter ปีงบประมาณ
   const currentYear = (new Date().getFullYear() + 543).toString();
   const [selectedYear, setSelectedYear] = useState(currentYear);
+  const [disbursementFilter, setDisbursementFilter] = useState('ALL');
   const [users, setUsers] = useState([]);
   const [searchTerm, setSearchTerm] = useState('');
   const [currentPage, setCurrentPage] = useState(1);
@@ -340,7 +341,14 @@ const ProjectDashboard = () => {
 
   const yearFilteredProjects = selectedYear === 'ALL' ? projects : projects.filter(p => p.fiscal_year_id === selectedYear);
 
-  const filteredProjects = yearFilteredProjects.filter(p => 
+  const disbursedFilteredProjects = yearFilteredProjects.filter(p => {
+    if (disbursementFilter === 'ALL') return true;
+    if (disbursementFilter === 'UNDISBURSED') return p.budget_balance === p.budget_amount;
+    if (disbursementFilter === 'DISBURSED') return p.budget_balance < p.budget_amount;
+    return true;
+  });
+
+  const filteredProjects = disbursedFilteredProjects.filter(p => 
     p.title_th?.toLowerCase().includes(searchTerm.toLowerCase()) ||
     p.title_en?.toLowerCase().includes(searchTerm.toLowerCase()) ||
     p.id?.toLowerCase().includes(searchTerm.toLowerCase()) ||
@@ -581,6 +589,12 @@ const ProjectDashboard = () => {
             {availableYears.map(year => (
               <option key={year} value={year}>{year} {year === currentYear ? '(ปีปัจจุบัน)' : ''}</option>
             ))}
+          </select>
+          <label style={{ fontWeight: 500, color: 'var(--text-secondary)' }}>การเบิกจ่าย:</label>
+          <select value={disbursementFilter} onChange={e => { setDisbursementFilter(e.target.value); setCurrentPage(1); }} style={{ padding: '0.5rem 1rem', borderRadius: '0.5rem', border: '1px solid var(--border-color)', backgroundColor: 'var(--bg-color)', fontWeight: 600 }}>
+            <option value="ALL">ทั้งหมด</option>
+            <option value="UNDISBURSED">ยังไม่เบิกจ่าย</option>
+            <option value="DISBURSED">มีการเบิกจ่ายแล้ว</option>
           </select>
           <input 
             type="text" 

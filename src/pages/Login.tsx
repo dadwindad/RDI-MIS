@@ -1,4 +1,5 @@
 import React, { useState } from 'react';
+import logo from '../logo.png';
 import { Blocks, KeyRound, User as UserIcon } from 'lucide-react';
 import { db, User } from '../services/db';
 
@@ -28,8 +29,8 @@ const Login: React.FC<LoginProps> = ({ onLogin }) => {
     <div style={{ display: 'flex', height: '100vh', backgroundColor: 'var(--bg-tertiary)', alignItems: 'center', justifyContent: 'center' }}>
       <div style={{ backgroundColor: 'var(--bg-secondary)', padding: '3rem', borderRadius: '1rem', boxShadow: '0 10px 25px rgba(0,0,0,0.05)', width: '100%', maxWidth: '420px' }}>
         <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', marginBottom: '2rem' }}>
-          <div style={{ backgroundColor: 'var(--accent-light)', color: 'var(--accent-color)', padding: '1rem', borderRadius: '50%', marginBottom: '1rem' }}>
-            <Blocks size={32} />
+          <div style={{ backgroundColor: 'var(--accent-light)', color: 'var(--accent-color)', padding: '1rem', borderRadius: '50%', marginBottom: '1rem', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+            <img src={logo} alt="Logo" style={{ width: '32px', height: '32px', borderRadius: '50%', objectFit: 'cover' }} />
           </div>
           <h1 style={{ fontSize: '1.5rem', fontWeight: 700, margin: 0 }}>RICP Core OS</h1>
           <p style={{ color: 'var(--text-secondary)', fontSize: '0.875rem' }}>Sign in to Centralized Platform</p>

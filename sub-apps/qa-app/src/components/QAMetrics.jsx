@@ -137,7 +137,7 @@ const QAMetrics = ({ setActiveMenu }) => {
       const userStr = localStorage.getItem('ricp_current_user');
       if (!userStr) return;
       const user = JSON.parse(userStr);
-      
+
       await fetch('http://localhost:3001/api/audit', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -261,7 +261,7 @@ const QAMetrics = ({ setActiveMenu }) => {
           ...t,
           value: t.unit === 'ไฟล์' ? 0 : t.value
         }));
-        
+
         kpiToSave.target_value = kpiToSave.targets[0].value;
         kpiToSave.unit = kpiToSave.targets[0].unit;
       }
@@ -287,7 +287,7 @@ const QAMetrics = ({ setActiveMenu }) => {
     try {
       const userStr = localStorage.getItem('ricp_current_user');
       const user = userStr ? JSON.parse(userStr) : { name: 'Unknown' };
-      
+
       // Fields MUST be appended before file for multer to catch them in req.body
       formData.append('appSource', 'QA Metrics');
       formData.append('activity', 'KPI Target Attachment');
@@ -308,7 +308,7 @@ const QAMetrics = ({ setActiveMenu }) => {
         const data = await res.json();
         setNewKpi(prev => ({
           ...prev,
-          targets: prev.targets.map((t, i) => 
+          targets: prev.targets.map((t, i) =>
             i === targetIdx ? { ...t, attachment_path: data.path, attachment_name: file.name } : t
           )
         }));
@@ -358,7 +358,7 @@ const QAMetrics = ({ setActiveMenu }) => {
         headers: { 'Content-Type': 'application/json', 'Authorization': token },
         body: JSON.stringify({ ...newTopic, framework_id: viewingFrameworkId })
       });
-      
+
       if (res.ok) {
         logAudit(isEditingTopic ? 'UPDATE_TOPIC' : 'CREATE_TOPIC', `${isEditingTopic ? 'Updated' : 'Created'} Topic: ${newTopic.code} - ${newTopic.name}`);
         setIsAddingTopic(false);
@@ -370,7 +370,7 @@ const QAMetrics = ({ setActiveMenu }) => {
         const err = await res.json();
         showToast(err.error || 'ไม่สามารถบันทึกหัวข้อได้', 'error');
       }
-    } catch (e) { 
+    } catch (e) {
       showToast('เกิดข้อผิดพลาด: ' + e.message, 'error');
     }
   };
@@ -551,17 +551,17 @@ const QAMetrics = ({ setActiveMenu }) => {
           const mapping = item.assigned_mappings.find(m => m.id === mappingId);
           if (mapping) mappingDetails = `KPI: ${mapping.kpi_code} from ${item.type} "${item.title}"`;
         }
-        
+
         logAudit('UNMAP_KPI', `Unmapped ${mappingDetails || mappingId}`);
         showToast('ยกเลิกการเชื่อมโยงข้อมูลสำเร็จ!', 'success');
-        
+
         await fetchData();
-        
+
         if (mappingModal.show && mappingModal.item) {
           const updatedMappings = mappingModal.item.assigned_mappings.filter(m => m.id !== mappingId);
           const mappingToRemove = mappingModal.item.assigned_mappings.find(m => m.id === mappingId);
           const updatedKpiIds = mappingModal.item.assigned_kpi_ids.filter(id => id !== mappingToRemove?.kpi_id);
-          
+
           setMappingModal({
             ...mappingModal,
             item: {
@@ -644,7 +644,7 @@ const QAMetrics = ({ setActiveMenu }) => {
               fontWeight: activeTab === 'inbox' ? 600 : 400
             }}
           >
-            <Inbox size={18} /> KPI Inbox 
+            <Inbox size={18} /> KPI Inbox
             {inbox.filter(i => !i.is_tagged).length > 0 && (
               <span style={{ backgroundColor: 'var(--status-danger)', color: 'white', fontSize: '0.7rem', padding: '0.1rem 0.4rem', borderRadius: '1rem' }}>
                 {inbox.filter(i => !i.is_tagged).length}
@@ -740,7 +740,7 @@ const QAMetrics = ({ setActiveMenu }) => {
                 {filteredKpis.map(kpi => {
                   const mainTarget = (kpi.targets && kpi.targets.length > 0) ? kpi.targets[0] : { value: kpi.target_value, unit: kpi.unit };
                   const isFileUnit = mainTarget.unit === 'ไฟล์';
-                  const percent = isFileUnit 
+                  const percent = isFileUnit
                     ? (kpi.actual_count > 0 ? 100 : 0)
                     : Math.min(Math.round((kpi.actual_count / (mainTarget.value || 1)) * 100), 100);
                   return (
@@ -794,8 +794,8 @@ const QAMetrics = ({ setActiveMenu }) => {
         const filteredInbox = inbox.filter(item => {
           const matchYear = inboxYearFilter === 'ทั้งหมด' || item.year === inboxYearFilter;
           const matchType = inboxTypeFilter === 'ทั้งหมด' || item.type === inboxTypeFilter;
-          const matchStatus = inboxStatusFilter === 'ทั้งหมด' || 
-                             (inboxStatusFilter === 'ยังไม่ได้ระบุ KPI' ? !item.is_tagged : item.is_tagged);
+          const matchStatus = inboxStatusFilter === 'ทั้งหมด' ||
+            (inboxStatusFilter === 'ยังไม่ได้ระบุ KPI' ? !item.is_tagged : item.is_tagged);
           return matchYear && matchType && matchStatus;
         });
 
@@ -880,14 +880,14 @@ const QAMetrics = ({ setActiveMenu }) => {
                           color: item.is_tagged ? '#3b82f6' : 'var(--text-primary)',
                           marginBottom: '0.3rem'
                         }}>
-                          <span 
+                          <span
                             onClick={() => {
                               if (item.source === 'PMS' && setActiveMenu) {
                                 localStorage.setItem('pms_open_project_id', item.id);
                                 setActiveMenu('org-pms');
                               }
                             }}
-                            style={{ 
+                            style={{
                               cursor: item.source === 'PMS' ? 'pointer' : 'default',
                               transition: 'all 0.2s'
                             }}
@@ -1133,23 +1133,23 @@ const QAMetrics = ({ setActiveMenu }) => {
                           <h4 style={{ margin: 0, fontSize: '1.1rem', fontWeight: 700 }}>{topic.name}</h4>
                         </div>
                         {topic.description && <div style={{ fontSize: '0.85rem', color: 'var(--text-secondary)', marginTop: '0.25rem' }}>{topic.description}</div>}
-                        
+
                         <div style={{ marginTop: '1rem', backgroundColor: 'var(--bg-secondary)', padding: '1rem', borderRadius: '0.75rem', border: '1px solid var(--border-color)' }}>
                           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '0.5rem' }}>
                             <span style={{ fontSize: '0.75rem', fontWeight: 800, color: 'var(--text-secondary)', textTransform: 'uppercase' }}>Evidence (หลักฐานการดำเนินงาน)</span>
                           </div>
-                          <div style={{ 
-                            fontSize: '0.9rem', 
-                            color: topic.evidence ? 'var(--text-primary)' : '#9ca3af', 
+                          <div style={{
+                            fontSize: '0.9rem',
+                            color: topic.evidence ? 'var(--text-primary)' : '#9ca3af',
                             whiteSpace: 'pre-wrap',
                             fontStyle: topic.evidence ? 'normal' : 'italic'
                           }}>
                             {topic.evidence || 'ยังไม่ได้ระบุรายละเอียดหลักฐาน'}
                           </div>
                           {topic.evidence_name && (
-                            <a 
-                              href={`http://localhost:3005${topic.evidence_path}`} 
-                              target="_blank" 
+                            <a
+                              href={`http://localhost:3005${topic.evidence_path}`}
+                              target="_blank"
                               rel="noreferrer"
                               style={{ display: 'inline-flex', alignItems: 'center', gap: '0.3rem', fontSize: '0.75rem', color: 'var(--accent-color)', marginTop: '0.75rem', textDecoration: 'none', fontWeight: 600, backgroundColor: 'var(--accent-light)', padding: '0.25rem 0.6rem', borderRadius: '0.4rem' }}
                             >
@@ -1158,7 +1158,7 @@ const QAMetrics = ({ setActiveMenu }) => {
                           )}
                         </div>
                       </div>
-                      
+
                       <div style={{ display: 'flex', gap: '0.5rem', marginLeft: '1.5rem' }}>
                         <button
                           onClick={() => {
@@ -1203,12 +1203,12 @@ const QAMetrics = ({ setActiveMenu }) => {
                         </thead>
                         <tbody>
                           {kpis.filter(k => k.topic_id === topic.id).map(kpi => (
-                            <tr 
-                              key={kpi.id} 
+                            <tr
+                              key={kpi.id}
                               draggable={true}
                               onDragStart={(e) => handleDragStart(e, kpi.id)}
                               onDragEnd={handleDragEnd}
-                              style={{ 
+                              style={{
                                 borderBottom: '1px solid var(--border-color)',
                                 cursor: 'grab',
                                 transition: 'background-color 0.2s'
@@ -1287,14 +1287,14 @@ const QAMetrics = ({ setActiveMenu }) => {
                       </div>
                     </div>
 
-                    <div 
+                    <div
                       style={{ padding: '0 1rem' }}
                       onDragOver={(e) => handleDragOver(e, 'uncategorized')}
                       onDrop={(e) => handleDrop(e, null)} // topic_id = null
                       onDragLeave={() => setIsDraggingOverTopicId(null)}
                     >
-                      <table style={{ 
-                        width: '100%', 
+                      <table style={{
+                        width: '100%',
                         borderCollapse: 'collapse',
                         backgroundColor: isDraggingOverTopicId === 'uncategorized' ? 'rgba(245, 158, 11, 0.05)' : 'transparent',
                         borderRadius: '0.5rem',
@@ -1310,12 +1310,12 @@ const QAMetrics = ({ setActiveMenu }) => {
                         </thead>
                         <tbody>
                           {kpis.filter(k => k.framework_id === viewingFrameworkId && !k.topic_id).map(kpi => (
-                            <tr 
-                              key={kpi.id} 
+                            <tr
+                              key={kpi.id}
                               draggable={true}
                               onDragStart={(e) => handleDragStart(e, kpi.id)}
                               onDragEnd={handleDragEnd}
-                              style={{ 
+                              style={{
                                 borderBottom: '1px solid var(--border-color)',
                                 cursor: 'grab',
                                 transition: 'background-color 0.2s'
@@ -1547,7 +1547,7 @@ const QAMetrics = ({ setActiveMenu }) => {
           </div>
         </div>
       )}
-      
+
       {/* 1.5 Add/Edit Topic Modal */}
       {isAddingTopic && (
         <div style={{ position: 'fixed', inset: 0, backgroundColor: 'rgba(0,0,0,0.5)', display: 'flex', justifyContent: 'center', alignItems: 'center', zIndex: 1100 }}>
@@ -1573,11 +1573,11 @@ const QAMetrics = ({ setActiveMenu }) => {
               <div style={{ backgroundColor: 'var(--bg-tertiary)', padding: '1.25rem', borderRadius: '1rem', border: '1px solid var(--border-color)' }}>
                 <label style={{ fontSize: '0.875rem', fontWeight: 700, display: 'block', marginBottom: '0.75rem', color: 'var(--accent-color)' }}>Evidence (หลักฐานที่ต้องใช้)</label>
                 <div style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem' }}>
-                  <textarea 
-                    placeholder="ระบุรายละเอียดหลักฐานที่ต้องใช้สำหรับตัวชี้วัดในหัวข้อนี้..." 
-                    value={newTopic.evidence} 
-                    onChange={e => setNewTopic({ ...newTopic, evidence: e.target.value })} 
-                    style={{ width: '100%', padding: '0.75rem', borderRadius: '0.5rem', border: '1px solid var(--border-color)', minHeight: '100px', fontFamily: 'inherit', fontSize: '0.9rem' }} 
+                  <textarea
+                    placeholder="ระบุรายละเอียดหลักฐานที่ต้องใช้สำหรับตัวชี้วัดในหัวข้อนี้..."
+                    value={newTopic.evidence}
+                    onChange={e => setNewTopic({ ...newTopic, evidence: e.target.value })}
+                    style={{ width: '100%', padding: '0.75rem', borderRadius: '0.5rem', border: '1px solid var(--border-color)', minHeight: '100px', fontFamily: 'inherit', fontSize: '0.9rem' }}
                   />
                   <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
                     <label style={{ cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '0.4rem', fontSize: '0.8rem', color: 'var(--accent-color)', backgroundColor: 'var(--accent-light)', padding: '0.4rem 0.75rem', borderRadius: '0.5rem', fontWeight: 600 }}>
@@ -1617,10 +1617,10 @@ const QAMetrics = ({ setActiveMenu }) => {
             <form onSubmit={handleAddKpi} style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
               <div style={{ display: 'flex', flexDirection: 'column', gap: '0.25rem' }}>
                 <label style={{ fontSize: '0.875rem', fontWeight: 600 }}>Parent Topic (หัวข้อหลัก)</label>
-                <select 
-                  required 
-                  value={newKpi.topic_id} 
-                  onChange={e => setNewKpi({ ...newKpi, topic_id: e.target.value })} 
+                <select
+                  required
+                  value={newKpi.topic_id}
+                  onChange={e => setNewKpi({ ...newKpi, topic_id: e.target.value })}
                   style={{ padding: '0.6rem', borderRadius: '0.5rem', border: '1px solid var(--border-color)', backgroundColor: 'var(--bg-secondary)' }}
                 >
                   <option value="">-- เลือกหัวข้อหลัก --</option>
@@ -1680,20 +1680,20 @@ const QAMetrics = ({ setActiveMenu }) => {
                         <div style={{ flex: 1.2, display: 'flex', flexDirection: 'column', gap: '0.25rem' }}>
                           <label style={{ fontSize: '0.7rem', fontWeight: 600, color: 'var(--text-secondary)' }}>Unit</label>
                           <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-                            <input 
-                              required 
-                              type="text" 
+                            <input
+                              required
+                              type="text"
                               disabled={t.unit === 'ไฟล์'}
-                              value={t.unit} 
+                              value={t.unit}
                               onChange={e => {
                                 const nt = [...newKpi.targets]; nt[idx].unit = e.target.value; setNewKpi({ ...newKpi, targets: nt });
-                              }} 
-                              style={{ flex: 1, padding: '0.4rem', borderRadius: '0.375rem', border: '1px solid var(--border-color)', fontSize: '0.875rem', opacity: t.unit === 'ไฟล์' ? 0.7 : 1 }} 
+                              }}
+                              style={{ flex: 1, padding: '0.4rem', borderRadius: '0.375rem', border: '1px solid var(--border-color)', fontSize: '0.875rem', opacity: t.unit === 'ไฟล์' ? 0.7 : 1 }}
                             />
                             <label style={{ display: 'flex', alignItems: 'center', gap: '0.25rem', fontSize: '0.7rem', whiteSpace: 'nowrap', cursor: 'pointer', backgroundColor: 'var(--bg-tertiary)', padding: '0.4rem', borderRadius: '0.375rem', border: '1px solid var(--border-color)' }}>
-                              <input 
-                                type="checkbox" 
-                                checked={t.unit === 'ไฟล์'} 
+                              <input
+                                type="checkbox"
+                                checked={t.unit === 'ไฟล์'}
                                 onChange={e => {
                                   const nt = [...newKpi.targets];
                                   if (e.target.checked) {
@@ -1703,7 +1703,7 @@ const QAMetrics = ({ setActiveMenu }) => {
                                     nt[idx].unit = 'บทความ';
                                   }
                                   setNewKpi({ ...newKpi, targets: nt });
-                                }} 
+                                }}
                               />
                               เป็นไฟล์
                             </label>
@@ -1732,12 +1732,12 @@ const QAMetrics = ({ setActiveMenu }) => {
                             <span style={{ fontSize: '0.7rem', color: 'var(--text-secondary)', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis', maxWidth: '250px', display: 'flex', alignItems: 'center', gap: '0.25rem' }}>
                               <FileText size={12} /> {t.attachment_name}
                             </span>
-                            <button 
-                              type="button" 
+                            <button
+                              type="button"
                               onClick={() => {
                                 setNewKpi(prev => ({
                                   ...prev,
-                                  targets: prev.targets.map((target, i) => 
+                                  targets: prev.targets.map((target, i) =>
                                     i === idx ? { ...target, attachment_path: '', attachment_name: '' } : target
                                   )
                                 }));

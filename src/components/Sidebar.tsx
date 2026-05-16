@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import logo from '../logo.png';
 import { 
   LayoutDashboard, 
   Users, 
@@ -43,11 +44,16 @@ const Sidebar: React.FC<SidebarProps> = ({ activeMenu, setActiveMenu, isOpen }) 
 
   return (
     <aside className={`sidebar ${isOpen ? 'open' : 'closed'}`}>
-      <div className="sidebar-header">
-        <div className="sidebar-logo">
-          <Blocks size={28} />
-          {isOpen && <span>RICP Core</span>}
-        </div>
+      <div className="sidebar-header" style={{ height: 'var(--header-height)', display: 'flex', alignItems: 'center', padding: '0 1.25rem', gap: '0.75rem', overflow: 'hidden' }}>
+        <img src={logo} alt="Logo" style={{ width: '32px', height: '32px', borderRadius: '50%', objectFit: 'cover', flexShrink: 0, border: '1px solid var(--border-color)' }} />
+        {isOpen && (
+          <div style={{ display: 'flex', flexDirection: 'column', justifyContent: 'center', gap: '4px' }}>
+            <span style={{ fontWeight: 800, fontSize: '1.05rem', color: 'var(--accent-color)', lineHeight: 1 }}>RICP Core</span>
+            <div style={{ display: 'flex' }}>
+              <span style={{ fontSize: '0.55rem', color: '#ffffff', fontWeight: 800, whiteSpace: 'nowrap', backgroundColor: 'var(--accent-color)', padding: '1px 6px', borderRadius: '4px', letterSpacing: '0.03em' }}>สถาบันวิจัยและพัฒนา</span>
+            </div>
+          </div>
+        )}
       </div>
       
       <div className="sidebar-menu">
