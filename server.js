@@ -142,7 +142,7 @@ db.serialize(() => {
   db.get("SELECT COUNT(*) as count FROM fiscal_years", (err, row) => {
     if (row && row.count === 0) {
       console.log("Seeding initial fiscal years to SQLite...");
-      const stmt = db.prepare("INSERT INTO fiscal_years VALUES (?, ?, ?, ?, ?)");
+      const stmt = db.prepare("INSERT INTO fiscal_years (year, start_date, end_date, state, desc) VALUES (?, ?, ?, ?, ?)");
       stmt.run('2568', '1 ต.ค. 67', '30 ก.ย. 68', 'Planning', 'เปิดรับคำของบประมาณ');
       stmt.run('2567', '1 ต.ค. 66', '30 ก.ย. 67', 'Active', 'ปีงบประมาณปัจจุบัน');
       stmt.run('2566', '1 ต.ค. 65', '30 ก.ย. 66', 'Archived', 'ปิดปีงบประมาณแล้ว');

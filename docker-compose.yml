@@ -1,0 +1,66 @@
+services:
+  frontend:
+    build:
+      context: .
+      dockerfile: Dockerfile.frontend
+    ports:
+      - "3801:80"  # ส่งเฉพาะพอร์ตของ front-end ออกสู่ภายนอกเท่านั้น
+    depends_on:
+      - core-backend
+      - pms-backend
+      - calendar-backend
+      - qa-backend
+    networks:
+      - rdi-network
+
+  core-backend:
+    build:
+      context: .
+      dockerfile: Dockerfile.backend
+    volumes:
+      - core-db:/app/databases
+      - core-storage:/app/storage
+    networks:
+      - rdi-network
+
+  pms-backend:
+    build:
+      context: ./sub-apps/pms-app
+      dockerfile: Dockerfile
+    volumes:
+      - pms-db:/app/databases
+      - pms-uploads:/app/uploads
+    networks:
+      - rdi-network
+
+  calendar-backend:
+    build:
+      context: ./sub-apps/calendar-app
+      dockerfile: Dockerfile
+    volumes:
+      - calendar-db:/app/databases
+    networks:
+      - rdi-network
+
+  qa-backend:
+    build:
+      context: ./sub-apps/qa-app
+      dockerfile: Dockerfile
+    volumes:
+      - qa-db:/app/databases
+      - qa-uploads:/app/uploads
+    networks:
+      - rdi-network
+
+volumes:
+  core-db:
+  core-storage:
+  pms-db:
+  pms-uploads:
+  calendar-db:
+  qa-db:
+  qa-uploads:
+
+networks:
+  rdi-network:
+    driver: bridge
