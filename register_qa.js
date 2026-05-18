@@ -7,8 +7,8 @@ const db = new sqlite3.Database(dbPath);
 const app = {
   app_id: 'org-qa',
   name: 'QA & Performance Metrics',
-  entry_url: 'http://localhost:3005/remoteEntry.js',
-  api_endpoint: 'http://localhost:3005',
+  entry_url: 'http://localhost:3805/remoteEntry.js',
+  api_endpoint: 'http://localhost:3805',
   required_roles: '["admin","manager","staff"]',
   status: 'Active'
 };

@@ -246,7 +246,7 @@ app.get('/api/qa/inbox', requireAuth, async (req, res) => {
     // 1. Fetch Aggregated Data from PMS
     let pmsAggregatedData = [];
     try {
-      const pmsRes = await fetch('http://localhost:3002/api/pms/aggregated-data', {
+      const pmsRes = await fetch('http://localhost:3802/api/pms/aggregated-data', {
         headers: { 'Authorization': req.headers['authorization'] }
       });
       if (pmsRes.ok) {
@@ -376,5 +376,5 @@ app.patch('/api/qa/targets/:id', requireAuth, (req, res) => {
   );
 });
 
-const PORT = 3005;
+const PORT = 3805;
 app.listen(PORT, () => console.log(`🚀 QA Sub-App running on http://localhost:${PORT}`));

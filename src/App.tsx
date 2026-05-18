@@ -17,7 +17,7 @@ import { db, User } from './services/db';
 
 const getNormalizedPath = (path: string) => {
   let normalized = path;
-  if (normalized.startsWith('/RDI-MIS')) {
+  if (normalized.startsWith('/rdi_mis')) {
     normalized = normalized.substring(8);
   }
   if (normalized === '') return '/';
@@ -70,7 +70,7 @@ function App() {
       path = '/' + activeMenu;
     }
 
-    const fullNewPath = '/RDI-MIS' + path;
+    const fullNewPath = '/rdi_mis' + path;
     if (window.location.pathname !== fullNewPath) {
       window.history.pushState(null, '', fullNewPath);
     }
