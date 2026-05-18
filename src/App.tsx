@@ -15,10 +15,19 @@ import Login from './pages/Login';
 import PublicCalendarView from '../sub-apps/calendar-app/src/components/PublicCalendarView';
 import { db, User } from './services/db';
 
+const getNormalizedPath = (path: string) => {
+  let normalized = path;
+  if (normalized.startsWith('/RDI-MIS')) {
+    normalized = normalized.substring(8);
+  }
+  if (normalized === '') return '/';
+  return normalized;
+};
+
 function App() {
   const [currentUser, setCurrentUser] = React.useState<User | null>(null);
   const [activeMenu, setActiveMenu] = React.useState(() => {
-    const path = window.location.pathname;
+    const path = getNormalizedPath(window.location.pathname);
     if (path === '/' || path === '') return 'dashboard';
     if (path === '/pms' || path === '/calendar' || path === '/finance' || path === '/ec' || path === '/ip' || path === '/qa') {
       return 'org-' + path.substring(1);
@@ -32,7 +41,7 @@ function App() {
     if (savedUser) setCurrentUser(JSON.parse(savedUser));
 
     const handlePathChange = () => {
-      const path = window.location.pathname;
+      const path = getNormalizedPath(window.location.pathname);
       if (path === '/' || path === '') {
         setActiveMenu('dashboard');
       } else if (path === '/pms' || path === '/calendar' || path === '/finance' || path === '/ec' || path === '/ip' || path === '/qa') {
@@ -47,7 +56,8 @@ function App() {
   }, []);
 
   React.useEffect(() => {
-    if (window.location.pathname === '/public-calendar') {
+    const normalizedCurrent = getNormalizedPath(window.location.pathname);
+    if (normalizedCurrent === '/public-calendar') {
       return;
     }
 
@@ -60,8 +70,9 @@ function App() {
       path = '/' + activeMenu;
     }
 
-    if (window.location.pathname !== path) {
-      window.history.pushState(null, '', path);
+    const fullNewPath = '/RDI-MIS' + path;
+    if (window.location.pathname !== fullNewPath) {
+      window.history.pushState(null, '', fullNewPath);
     }
   }, [activeMenu]);
 
@@ -75,7 +86,7 @@ function App() {
     localStorage.removeItem('ricp_current_user');
   };
 
-  if (window.location.pathname === '/public-calendar') {
+  if (getNormalizedPath(window.location.pathname) === '/public-calendar') {
     return <PublicCalendarView />;
   }
 
