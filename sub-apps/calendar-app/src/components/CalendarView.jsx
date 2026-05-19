@@ -80,7 +80,7 @@ const CalendarView = () => {
 
   const fetchUsers = async () => {
     try {
-      const res = await fetch('http://localhost:3801/api/users');
+      const res = await fetch('http://localhost:3001/api/users');
       const data = await res.json();
       const filtered = data
         .filter(u => u.role === 'manager' || u.role === 'staff')
@@ -93,7 +93,7 @@ const CalendarView = () => {
 
   const fetchActivityTypes = async () => {
     try {
-      const res = await fetch('http://localhost:3803/api/activity-types');
+      const res = await fetch('http://localhost:3003/api/activity-types');
       const data = await res.json();
       setActivityTypes(data);
     } catch (e) {
@@ -107,7 +107,7 @@ const CalendarView = () => {
       const payload = btoa(JSON.stringify({ id: 'user-1', name: 'Test User', role: 'admin' }));
       const token = `Bearer dummyHeader.${payload}.dummySignature`;
 
-      const url = editingTypeId ? `http://localhost:3803/api/activity-types/${editingTypeId}` : 'http://localhost:3803/api/activity-types';
+      const url = editingTypeId ? `http://localhost:3003/api/activity-types/${editingTypeId}` : 'http://localhost:3003/api/activity-types';
       const method = editingTypeId ? 'PUT' : 'POST';
 
       const res = await fetch(url, {
@@ -134,7 +134,7 @@ const CalendarView = () => {
         const payload = btoa(JSON.stringify({ id: 'user-1', name: 'Test User', role: 'admin' }));
         const token = `Bearer dummyHeader.${payload}.dummySignature`;
 
-        const res = await fetch(`http://localhost:3803/api/activity-types/${id}`, {
+        const res = await fetch(`http://localhost:3003/api/activity-types/${id}`, {
           method: 'DELETE',
           headers: { 'Authorization': token }
         });
@@ -161,7 +161,7 @@ const CalendarView = () => {
       const start = new Date(currentDate.getFullYear(), currentDate.getMonth(), 1).toISOString().split('T')[0];
       const end = new Date(currentDate.getFullYear(), currentDate.getMonth() + 1, 0).toISOString().split('T')[0];
 
-      const response = await fetch(`http://localhost:3803/api/calendar/events?start_date=${start}&end_date=${end}`, {
+      const response = await fetch(`http://localhost:3003/api/calendar/events?start_date=${start}&end_date=${end}`, {
         headers: { 'Authorization': token }
       });
       const data = await response.json();
@@ -255,7 +255,7 @@ const CalendarView = () => {
 
         formData.append('file', fileToUpload);
 
-        const uploadRes = await fetch('http://localhost:3801/api/storage/upload', {
+        const uploadRes = await fetch('http://localhost:3001/api/storage/upload', {
           method: 'POST',
           headers: {
             'Authorization': token,
@@ -269,10 +269,10 @@ const CalendarView = () => {
         }
 
         const uploadData = await uploadRes.json();
-        storage_path = `http://localhost:3801${uploadData.path}`;
+        storage_path = `http://localhost:3001${uploadData.path}`;
       }
 
-      const url = newEvent.id ? `http://localhost:3803/api/activities/${newEvent.id}` : 'http://localhost:3803/api/activities';
+      const url = newEvent.id ? `http://localhost:3003/api/activities/${newEvent.id}` : 'http://localhost:3003/api/activities';
       const method = newEvent.id ? 'PUT' : 'POST';
 
       const actRes = await fetch(url, {
@@ -293,7 +293,7 @@ const CalendarView = () => {
       try {
         const action = newEvent.id ? 'UPDATE_ACTIVITY' : 'CREATE_ACTIVITY';
         const details = `${newEvent.id ? 'แก้ไข' : 'สร้าง'}กิจกรรม: ${newEvent.title}`;
-        await fetch('http://localhost:3801/api/audit', {
+        await fetch('http://localhost:3001/api/audit', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({ user_name: userName, action, details })
@@ -330,7 +330,7 @@ const CalendarView = () => {
         const payload = btoa(unescape(encodeURIComponent(JSON.stringify({ id: 'user-1', name: userName, role: 'admin' }))));
         const token = `Bearer dummyHeader.${payload}.dummySignature`;
 
-        const res = await fetch(`http://localhost:3803/api/activities/${id}`, {
+        const res = await fetch(`http://localhost:3003/api/activities/${id}`, {
           method: 'DELETE',
           headers: { 'Authorization': token }
         });
@@ -340,7 +340,7 @@ const CalendarView = () => {
         try {
           const eventToDelete = events.find(e => e.id === id);
           const title = eventToDelete ? eventToDelete.title : id;
-          await fetch('http://localhost:3801/api/audit', {
+          await fetch('http://localhost:3001/api/audit', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({ user_name: userName, action: 'DELETE_ACTIVITY', details: `ลบกิจกรรม: ${title}` })

@@ -19,7 +19,7 @@ const FiscalYear: React.FC<FiscalYearProps> = ({ currentUser }) => {
 
   const showToast = (message: string, type: 'success' | 'error' = 'success') => {
     setToast({ message, type });
-    setTimeout(() => setToast(null), 3800);
+    setTimeout(() => setToast(null), 3000);
   };
 
   const confirmAction = (message: string, onConfirm: () => void) => {

@@ -17,7 +17,7 @@ const AppRegistry: React.FC<AppRegistryProps> = ({ currentUser, setActiveMenu })
 
   const showToast = (message: string, type: 'success' | 'error' = 'success') => {
     setToast({ message, type });
-    setTimeout(() => setToast(null), 3800);
+    setTimeout(() => setToast(null), 3000);
   };
 
   const confirmAction = (message: string, onConfirm: () => void) => {
@@ -209,11 +209,11 @@ const AppRegistry: React.FC<AppRegistryProps> = ({ currentUser, setActiveMenu })
               </div>
               <div>
                 <label style={{ display: 'block', marginBottom: '0.5rem', fontWeight: 500, fontSize: '0.875rem' }}>Remote Entry URL (MFE Source)</label>
-                <input type="url" placeholder="http://localhost:3802/remoteEntry.js" value={formData.entry_url} onChange={e => setFormData({...formData, entry_url: e.target.value})} style={{ width: '100%', padding: '0.75rem', border: '1px solid var(--border-color)', borderRadius: '0.5rem' }} required />
+                <input type="url" placeholder="http://localhost:3002/remoteEntry.js" value={formData.entry_url} onChange={e => setFormData({...formData, entry_url: e.target.value})} style={{ width: '100%', padding: '0.75rem', border: '1px solid var(--border-color)', borderRadius: '0.5rem' }} required />
               </div>
               <div>
                 <label style={{ display: 'block', marginBottom: '0.5rem', fontWeight: 500, fontSize: '0.875rem' }}>API Endpoint Base</label>
-                <input type="url" placeholder="http://localhost:3802" value={formData.api_endpoint} onChange={e => setFormData({...formData, api_endpoint: e.target.value})} style={{ width: '100%', padding: '0.75rem', border: '1px solid var(--border-color)', borderRadius: '0.5rem' }} required />
+                <input type="url" placeholder="http://localhost:3002" value={formData.api_endpoint} onChange={e => setFormData({...formData, api_endpoint: e.target.value})} style={{ width: '100%', padding: '0.75rem', border: '1px solid var(--border-color)', borderRadius: '0.5rem' }} required />
               </div>
               <div>
                 <label style={{ display: 'block', marginBottom: '0.5rem', fontWeight: 500, fontSize: '0.875rem' }}>Required Roles (JSON Array)</label>

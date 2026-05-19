@@ -154,7 +154,7 @@ db.serialize(() => {
     if (row && row.count === 0) {
       console.log("Seeding initial apps to SQLite...");
       const stmt = db.prepare("INSERT INTO app_registry VALUES (?, ?, ?, ?, ?, ?)");
-      stmt.run('org-pms', 'Project Management (PMS)', 'http://localhost:3802/remoteEntry.js', 'http://localhost:3802', '["admin","manager","staff"]', 'Active');
+      stmt.run('org-pms', 'Project Management (PMS)', 'http://localhost:3002/remoteEntry.js', 'http://localhost:3002', '["admin","manager","staff"]', 'Active');
       stmt.run('org-ec', 'Ethics Committee (EC)', 'https://ec.research.ac.th/remoteEntry.js', 'https://api-ec.research.ac.th', '["admin","manager"]', 'Active');
       stmt.run('org-finance', 'Financial System', 'https://finance.research.ac.th/remoteEntry.js', 'https://api-finance.research.ac.th', '["admin","manager"]', 'Maintenance');
       stmt.run('org-ip', 'IP Registration', 'https://ip.research.ac.th/remoteEntry.js', 'https://api-ip.research.ac.th', '["admin","manager"]', 'Maintenance');
@@ -452,7 +452,7 @@ app.get('/api/storage/files', (req, res) => {
         activity,
         uploader,
         isDeleted,
-        url: 'http://localhost:3801/storage/' + parseFilename,
+        url: 'http://localhost:3001/storage/' + parseFilename,
         size: stats.size,
         createdAt: stats.birthtime
       };
@@ -496,7 +496,7 @@ app.post('/api/storage/clear-deleted', (req, res) => {
   });
 });
 
-const PORT = 3801;
+const PORT = 3001;
 app.listen(PORT, () => {
   console.log(`SQLite Backend Server running on http://localhost:${PORT}`);
 });

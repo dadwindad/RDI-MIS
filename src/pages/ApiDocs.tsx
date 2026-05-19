@@ -21,7 +21,7 @@ const apiDocs: EndpointGroup[] = [
   {
     group: 'Identity & Access (IAM)',
     icon: <Shield size={20} />,
-    port: '3801',
+    port: '3001',
     items: [
       {
         method: 'POST', path: '/api/login', desc: 'Authenticate user and receive profile data.',
@@ -42,7 +42,7 @@ const apiDocs: EndpointGroup[] = [
   {
     group: 'Platform Configuration',
     icon: <Settings size={20} />,
-    port: '3801',
+    port: '3001',
     items: [
       {
         method: 'GET', path: '/api/fiscal-years', desc: 'Get list of all fiscal years and their states (Planning, Active, Archived).',
@@ -61,7 +61,7 @@ const apiDocs: EndpointGroup[] = [
   {
     group: 'Local Storage Gateway',
     icon: <Database size={20} />,
-    port: '3801',
+    port: '3001',
     items: [
       {
         method: 'POST', path: '/api/storage/upload', desc: 'Centralized file upload. Used by all sub-apps.',
@@ -78,7 +78,7 @@ const apiDocs: EndpointGroup[] = [
   {
     group: 'PMS: Project Management',
     icon: <Activity size={20} />,
-    port: '3802',
+    port: '3002',
     items: [
       {
         method: 'GET', path: '/api/pms/projects', desc: 'Get all research projects.',
@@ -98,7 +98,7 @@ const apiDocs: EndpointGroup[] = [
   {
     group: 'Smart Office: Calendar & e-Doc',
     icon: <Calendar size={20} />,
-    port: '3803',
+    port: '3003',
     items: [
       {
         method: 'GET', path: '/api/activities', desc: 'List all staff activities and events.',
@@ -118,7 +118,7 @@ const apiDocs: EndpointGroup[] = [
   {
     group: 'QA: Performance Metrics',
     icon: <FileText size={20} />,
-    port: '3805',
+    port: '3005',
     items: [
       {
         method: 'GET', path: '/api/qa/frameworks', desc: 'List KPI Frameworks (e.g., EdPEx, SMS).',

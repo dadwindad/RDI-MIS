@@ -7,7 +7,7 @@ export default defineConfig({
   base: '/rdi_mis/',
   server: {
     proxy: {
-      '/api': 'http://localhost:3801'
+      '/api': 'http://localhost:3001'
     }
   }
 })

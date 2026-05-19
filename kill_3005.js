@@ -1,8 +1,8 @@
 import { exec } from 'child_process';
 
-exec('netstat -ano | findstr :3805', (err, stdout, stderr) => {
+exec('netstat -ano | findstr :3005', (err, stdout, stderr) => {
   if (err || !stdout) {
-    console.log('No process found on port 3805 or error occurred.');
+    console.log('No process found on port 3005 or error occurred.');
     return;
   }
   

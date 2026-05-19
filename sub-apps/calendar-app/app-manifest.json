@@ -1,8 +1,8 @@
 {
   "app_id": "org-calendar",
   "name": "Smart Office & Calendar",
-  "entry_url": "http://localhost:3803/remoteEntry.js",
-  "api_endpoint": "http://localhost:3803",
+  "entry_url": "http://localhost:3003/remoteEntry.js",
+  "api_endpoint": "http://localhost:3003",
   "required_roles": [
     "user",
     "admin"

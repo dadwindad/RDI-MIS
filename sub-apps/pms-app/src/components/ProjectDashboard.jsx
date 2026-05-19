@@ -54,7 +54,7 @@ const ProjectDashboard = () => {
 
   const fetchProjects = async () => {
     try {
-      const res = await fetch('http://localhost:3802/api/pms/projects', {
+      const res = await fetch('http://localhost:3002/api/pms/projects', {
         headers: { 'Authorization': `Bearer ${getAuthToken()}` }
       });
       if (res.ok) {
@@ -64,13 +64,13 @@ const ProjectDashboard = () => {
         throw new Error('API Error');
       }
     } catch (e) {
-      setErrorMsg('Cannot connect to PMS Backend. Please ensure that PMS Server (Port 3802) is running.');
+      setErrorMsg('Cannot connect to PMS Backend. Please ensure that PMS Server (Port 3002) is running.');
     }
   };
 
   const fetchTransactions = async (projectId) => {
     try {
-      const res = await fetch(`http://localhost:3802/api/pms/projects/${projectId}/transactions`, {
+      const res = await fetch(`http://localhost:3002/api/pms/projects/${projectId}/transactions`, {
         headers: { 'Authorization': `Bearer ${getAuthToken()}` }
       });
       if (res.ok) {
@@ -84,13 +84,13 @@ const ProjectDashboard = () => {
   const handleDeleteTransaction = async (txId) => {
     if (!window.confirm('คุณต้องการลบประวัติการเบิกจ่ายนี้ใช่หรือไม่? ยอดเงินจะถูกคืนเข้าโครงการ')) return;
     try {
-      const res = await fetch(`http://localhost:3802/api/pms/transactions/${txId}`, {
+      const res = await fetch(`http://localhost:3002/api/pms/transactions/${txId}`, {
         method: 'DELETE',
         headers: { 'Authorization': `Bearer ${getAuthToken()}` }
       });
       if (res.ok) {
         fetchTransactions(selectedProject.id);
-        const projectsRes = await fetch('http://localhost:3802/api/pms/projects', { headers: { 'Authorization': `Bearer ${getAuthToken()}` } });
+        const projectsRes = await fetch('http://localhost:3002/api/pms/projects', { headers: { 'Authorization': `Bearer ${getAuthToken()}` } });
         const allProjects = await projectsRes.json();
         const updatedProject = allProjects.find(p => p.id === selectedProject.id);
         setSelectedProject(updatedProject);
@@ -106,7 +106,7 @@ const ProjectDashboard = () => {
 
   const fetchFundTypes = async () => {
     try {
-      const res = await fetch('http://localhost:3802/api/pms/fund-types', {
+      const res = await fetch('http://localhost:3002/api/pms/fund-types', {
         headers: { 'Authorization': `Bearer ${getAuthToken()}` }
       });
       if (res.ok) {
@@ -129,7 +129,7 @@ const ProjectDashboard = () => {
 
   const fetchUsers = async () => {
     try {
-      const res = await fetch('http://localhost:3801/api/users');
+      const res = await fetch('http://localhost:3001/api/users');
       if (res.ok) {
         setUsers(await res.json());
       }
@@ -159,7 +159,7 @@ const ProjectDashboard = () => {
   const handleSaveProject = async (e) => {
     e.preventDefault();
     try {
-      const url = isEditing ? `http://localhost:3802/api/pms/projects/${formData.id}` : 'http://localhost:3802/api/pms/projects';
+      const url = isEditing ? `http://localhost:3002/api/pms/projects/${formData.id}` : 'http://localhost:3002/api/pms/projects';
       const method = isEditing ? 'PUT' : 'POST';
 
       const res = await fetch(url, {
@@ -173,7 +173,7 @@ const ProjectDashboard = () => {
         fetchProjects();
       }
     } catch (e) {
-      alert("Failed to save. Is the PMS backend running on port 3802?");
+      alert("Failed to save. Is the PMS backend running on port 3002?");
     }
   };
 
@@ -200,16 +200,16 @@ const ProjectDashboard = () => {
     let method = 'POST';
 
     if (type === 'ATTACH') {
-      url = `http://localhost:3802/api/pms/projects/${id}/attach`;
+      url = `http://localhost:3002/api/pms/projects/${id}/attach`;
       payload = { document_base64: data.document_base64, document_name: data.document_name, document_url: data.document_url };
     } else if (type === 'DEDUCT') {
-      url = `http://localhost:3802/api/pms/projects/${id}/deduct`;
+      url = `http://localhost:3002/api/pms/projects/${id}/deduct`;
       payload = { amount: parseFloat(data.amount), description: data.description, action_date: data.action_date, document_base64: data.document_base64, document_name: data.document_name, document_url: data.document_url };
     } else if (type === 'CLOSE') {
-      url = `http://localhost:3802/api/pms/projects/${id}/close`;
+      url = `http://localhost:3002/api/pms/projects/${id}/close`;
       payload = { document_base64: data.document_base64, document_name: data.document_name, document_url: data.document_url };
     } else if (type === 'EDIT_TRANSACTION') {
-      url = `http://localhost:3802/api/pms/transactions/${data.id}`;
+      url = `http://localhost:3002/api/pms/transactions/${data.id}`;
       payload = { amount: parseFloat(data.amount), description: data.description, action_date: data.action_date };
       method = 'PUT';
     }
@@ -225,7 +225,7 @@ const ProjectDashboard = () => {
         fetchTransactions(id);
         
         // Refresh project details manually
-        const projectsRes = await fetch('http://localhost:3802/api/pms/projects', { headers: { 'Authorization': `Bearer ${getAuthToken()}` } });
+        const projectsRes = await fetch('http://localhost:3002/api/pms/projects', { headers: { 'Authorization': `Bearer ${getAuthToken()}` } });
         const allProjects = await projectsRes.json();
         const updatedProject = allProjects.find(p => p.id === id);
         setSelectedProject(updatedProject);
@@ -254,14 +254,14 @@ const ProjectDashboard = () => {
   const handleRemoveDocument = async (doc_type, url) => {
     if (!window.confirm('คุณต้องการลบเอกสารแนบนี้ใช่หรือไม่?')) return;
     try {
-      const res = await fetch(`http://localhost:3802/api/pms/projects/${selectedProject.id}/remove-document`, {
+      const res = await fetch(`http://localhost:3002/api/pms/projects/${selectedProject.id}/remove-document`, {
         method: 'POST',
         headers: { 'Authorization': `Bearer ${getAuthToken()}`, 'Content-Type': 'application/json' },
         body: JSON.stringify({ doc_type, url })
       });
       if (res.ok) {
         // Refresh project details manually
-        const projectsRes = await fetch('http://localhost:3802/api/pms/projects', { headers: { 'Authorization': `Bearer ${getAuthToken()}` } });
+        const projectsRes = await fetch('http://localhost:3002/api/pms/projects', { headers: { 'Authorization': `Bearer ${getAuthToken()}` } });
         const allProjects = await projectsRes.json();
         const updatedProject = allProjects.find(p => p.id === selectedProject.id);
         setSelectedProject(updatedProject);
@@ -283,7 +283,7 @@ const ProjectDashboard = () => {
 
   const approveProject = async (id) => {
     if (window.confirm('Approve this project?')) {
-      await fetch(`http://localhost:3802/api/pms/projects/${id}/status`, {
+      await fetch(`http://localhost:3002/api/pms/projects/${id}/status`, {
         method: 'PUT',
         headers: { 'Authorization': `Bearer ${getAuthToken()}`, 'Content-Type': 'application/json' },
         body: JSON.stringify({ status: 'APPROVED' })
@@ -855,7 +855,7 @@ const ProjectDashboard = () => {
                 <input type="text" value={newFundName} onChange={e => setNewFundName(e.target.value)} placeholder="ชื่อ Fund Type ใหม่" style={{ flex: 1, padding: '0.5rem', border: '1px solid var(--border-color)', borderRadius: '0.25rem' }} />
                 <button onClick={async () => {
                   if (!newFundName.trim()) return;
-                  const res = await fetch('http://localhost:3802/api/pms/fund-types', {
+                  const res = await fetch('http://localhost:3002/api/pms/fund-types', {
                     method: 'POST',
                     headers: { 'Authorization': `Bearer ${getAuthToken()}`, 'Content-Type': 'application/json' },
                     body: JSON.stringify({ name: newFundName })
@@ -875,7 +875,7 @@ const ProjectDashboard = () => {
                     <span>{ft.name}</span>
                     <button onClick={async () => {
                       if (!confirm(`คุณต้องการลบ ${ft.name} ใช่หรือไม่?`)) return;
-                      const res = await fetch(`http://localhost:3802/api/pms/fund-types/${ft.id}`, {
+                      const res = await fetch(`http://localhost:3002/api/pms/fund-types/${ft.id}`, {
                         method: 'DELETE',
                         headers: { 'Authorization': `Bearer ${getAuthToken()}` }
                       });

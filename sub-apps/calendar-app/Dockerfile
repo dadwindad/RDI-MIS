@@ -13,5 +13,5 @@ COPY package*.json ./
 COPY server.js ./
 COPY src ./src
 RUN mkdir -p databases
-EXPOSE 3803
+EXPOSE 3003
 CMD ["node", "server.js"]

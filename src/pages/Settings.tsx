@@ -19,7 +19,7 @@ const SettingsPage: React.FC = () => {
   const handleSave = (e: React.FormEvent) => {
     e.preventDefault();
     setSaved(true);
-    setTimeout(() => setSaved(false), 3800);
+    setTimeout(() => setSaved(false), 3000);
   };
 
   const handleChange = (field: string, value: any) => {

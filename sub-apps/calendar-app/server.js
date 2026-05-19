@@ -12,7 +12,7 @@ const logToGlobalAudit = (userName, action, details) => {
   const data = JSON.stringify({ user_name: userName, action, details });
   const req = http.request({
     hostname: 'localhost',
-    port: 3801,
+    port: 3001,
     path: '/api/audit',
     method: 'POST',
     headers: {
@@ -494,5 +494,5 @@ app.post('/api/settings', requireAuth, (req, res) => {
   });
 });
 
-const PORT = 3803;
+const PORT = 3003;
 app.listen(PORT, () => console.log(`🚀 Calendar Sub-App running on http://localhost:${PORT}`));
