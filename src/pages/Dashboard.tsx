@@ -11,14 +11,14 @@ const Dashboard: React.FC<{ setActiveMenu: (menu: string) => void }> = ({ setAct
     const fetchData = async () => {
       try {
         // Fetch Apps
-        const appsRes = await fetch('http://localhost:3001/api/apps');
+        const appsRes = await fetch('/rdi_mis/api/apps');
         if (appsRes.ok) {
           const appsData = await appsRes.json();
           setApps(appsData);
         }
 
         // Fetch Storage Files
-        const storageRes = await fetch('http://localhost:3001/api/storage/files');
+        const storageRes = await fetch('/rdi_mis/api/storage/files');
         if (storageRes.ok) {
           const storageData = await storageRes.json();
           setStorageFiles(storageData);
@@ -27,7 +27,7 @@ const Dashboard: React.FC<{ setActiveMenu: (menu: string) => void }> = ({ setAct
         // Fetch Projects
         const mockPayload = { id: 1, name: 'Admin', role: 'admin' };
         const token = "header." + btoa(JSON.stringify(mockPayload)) + ".signature";
-        const pmsRes = await fetch('http://localhost:3002/api/pms/projects', {
+        const pmsRes = await fetch('/rdi_mis/api/pms/projects', {
           headers: { 'Authorization': `Bearer ${token}` }
         });
         

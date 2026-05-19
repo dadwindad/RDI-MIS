@@ -80,7 +80,7 @@ const CalendarView = () => {
 
   const fetchUsers = async () => {
     try {
-      const res = await fetch('http://localhost:3001/api/users');
+      const res = await fetch('/rdi_mis/api/users');
       const data = await res.json();
       const filtered = data
         .filter(u => u.role === 'manager' || u.role === 'staff')
@@ -255,7 +255,7 @@ const CalendarView = () => {
 
         formData.append('file', fileToUpload);
 
-        const uploadRes = await fetch('http://localhost:3001/api/storage/upload', {
+        const uploadRes = await fetch('/rdi_mis/api/storage/upload', {
           method: 'POST',
           headers: {
             'Authorization': token,
@@ -272,7 +272,7 @@ const CalendarView = () => {
         storage_path = `http://localhost:3001${uploadData.path}`;
       }
 
-      const url = newEvent.id ? `http://localhost:3003/api/activities/${newEvent.id}` : 'http://localhost:3003/api/activities';
+      const url = newEvent.id ? `/rdi_mis/api/activities/${newEvent.id}` : '/rdi_mis/api/activities';
       const method = newEvent.id ? 'PUT' : 'POST';
 
       const actRes = await fetch(url, {
@@ -293,7 +293,7 @@ const CalendarView = () => {
       try {
         const action = newEvent.id ? 'UPDATE_ACTIVITY' : 'CREATE_ACTIVITY';
         const details = `${newEvent.id ? 'แก้ไข' : 'สร้าง'}กิจกรรม: ${newEvent.title}`;
-        await fetch('http://localhost:3001/api/audit', {
+        await fetch('/rdi_mis/api/audit', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({ user_name: userName, action, details })
@@ -330,7 +330,7 @@ const CalendarView = () => {
         const payload = btoa(unescape(encodeURIComponent(JSON.stringify({ id: 'user-1', name: userName, role: 'admin' }))));
         const token = `Bearer dummyHeader.${payload}.dummySignature`;
 
-        const res = await fetch(`http://localhost:3003/api/activities/${id}`, {
+        const res = await fetch(`/rdi_mis/api/activities/${id}`, {
           method: 'DELETE',
           headers: { 'Authorization': token }
         });
@@ -340,7 +340,7 @@ const CalendarView = () => {
         try {
           const eventToDelete = events.find(e => e.id === id);
           const title = eventToDelete ? eventToDelete.title : id;
-          await fetch('http://localhost:3001/api/audit', {
+          await fetch('/rdi_mis/api/audit', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({ user_name: userName, action: 'DELETE_ACTIVITY', details: `ลบกิจกรรม: ${title}` })

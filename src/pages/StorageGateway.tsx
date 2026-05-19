@@ -27,7 +27,7 @@ const StorageGateway: React.FC<StorageGatewayProps> = ({ currentUser }) => {
 
   const fetchFiles = async () => {
     try {
-      const res = await fetch('/api/storage/files');
+      const res = await fetch('/rdi_mis/api/storage/files');
       if (res.ok) {
         const data = await res.json();
         setFiles(data);
@@ -50,7 +50,7 @@ const StorageGateway: React.FC<StorageGatewayProps> = ({ currentUser }) => {
 
     setIsUploading(true);
     try {
-      const res = await fetch('/api/storage/upload', {
+      const res = await fetch('/rdi_mis/api/storage/upload', {
         method: 'POST',
         headers: { 'X-User-Name': currentUser.name },
         body: formData
@@ -69,7 +69,7 @@ const StorageGateway: React.FC<StorageGatewayProps> = ({ currentUser }) => {
   const handleClearDeleted = async () => {
     if (!confirm("คุณต้องการลบไฟล์ที่ Soft Delete ทั้งหมดอย่างถาวรใช่หรือไม่?")) return;
     try {
-      const res = await fetch('/api/storage/clear-deleted', {
+      const res = await fetch('/rdi_mis/api/storage/clear-deleted', {
         method: 'POST',
         headers: { 'X-User-Name': currentUser.name }
       });

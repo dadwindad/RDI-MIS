@@ -2,7 +2,7 @@ import fetch from 'node-fetch'; // No, I will use built-in fetch if node >= 18.
 const base64Str = "data:text/plain;base64," + "A".repeat(3000000); // ~3MB
 const payload = { document_base64: base64Str, document_name: "test.txt" };
 
-fetch('http://localhost:3002/api/pms/projects/1/attach', {
+fetch('/rdi_mis/api/pms/projects/1/attach', {
   method: 'POST',
   headers: {
     'Content-Type': 'application/json',

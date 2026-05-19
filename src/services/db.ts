@@ -40,7 +40,7 @@ export interface Role {
   permissions: string[];
 }
 
-const API_URL = '/api';
+const API_URL = '/rdi_mis/api';
 
 const getHeaders = () => {
   const headers: Record<string, string> = { 'Content-Type': 'application/json' };

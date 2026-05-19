@@ -452,7 +452,7 @@ app.get('/api/storage/files', (req, res) => {
         activity,
         uploader,
         isDeleted,
-        url: 'http://localhost:3001/storage/' + parseFilename,
+        url: '/rdi_mis/storage/' + parseFilename,
         size: stats.size,
         createdAt: stats.birthtime
       };

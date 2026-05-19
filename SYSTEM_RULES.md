@@ -57,4 +57,4 @@
 - **Soft Delete Mechanism**: เมื่อมีการลบไฟล์ผ่าน API ห้ามลบไฟล์จริงออกจากดิสก์ทันที ให้เปลี่ยนชื่อไฟล์โดยต่อท้ายด้วย `.deleted` เสมอ
 - **Bulk Cleanup**: การลบไฟล์จริงออกจากดิสก์ (Hard Delete) จะทำได้ผ่าน Endpoint `/api/storage/clear-deleted` เท่านั้น ซึ่งจะลบเฉพาะไฟล์ที่ลงท้ายด้วย `.deleted`
 - **Metadata Association**: การอัปโหลดไฟล์ต้องส่งข้อมูล `appSource`, `activity`, และ `uploader` ผ่าน Body เสมอเพื่อให้ระบบสร้างชื่อไฟล์ที่ถูกต้อง
-- **Static Access**: ไฟล์ที่อัปโหลดแล้วสามารถเข้าถึงได้ผ่าน URL `http://localhost:3001/storage/ชื่อไฟล์`
+- **Static Access**: ไฟล์ที่อัปโหลดแล้วสามารถเข้าถึงได้ผ่าน URL `/rdi_mis/storage/ชื่อไฟล์`

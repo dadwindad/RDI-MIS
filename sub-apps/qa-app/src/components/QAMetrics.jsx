@@ -98,7 +98,7 @@ const QAMetrics = ({ setActiveMenu }) => {
     try {
       const token = getAuthToken();
       console.log(`Dragging KPI ${kpiId} to Topic ${topicId}`);
-      const res = await fetch(`http://localhost:3005/api/qa/kpis/${kpiId}`, {
+      const res = await fetch(`/rdi_mis/api/qa/kpis/${kpiId}`, {
         method: 'PATCH',
         headers: { 'Content-Type': 'application/json', 'Authorization': token },
         body: JSON.stringify({ topic_id: topicId })
@@ -138,7 +138,7 @@ const QAMetrics = ({ setActiveMenu }) => {
       if (!userStr) return;
       const user = JSON.parse(userStr);
 
-      await fetch('http://localhost:3001/api/audit', {
+      await fetch('/rdi_mis/api/audit', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
@@ -156,11 +156,11 @@ const QAMetrics = ({ setActiveMenu }) => {
     setLoading(true);
     try {
       // Mocking API calls since the server might not be running yet in this environment
-      // In production: fetch('http://localhost:3005/api/qa/dashboard')
-      const kpiRes = await fetch('http://localhost:3005/api/qa/dashboard');
+      // In production: fetch('/rdi_mis/api/qa/dashboard')
+      const kpiRes = await fetch('/rdi_mis/api/qa/dashboard');
       if (kpiRes.ok) setKpis(await kpiRes.json());
 
-      const fwRes = await fetch('http://localhost:3005/api/qa/frameworks');
+      const fwRes = await fetch('/rdi_mis/api/qa/frameworks');
       if (fwRes.ok) {
         const fwData = await fwRes.json();
         setFrameworks(fwData);
@@ -170,14 +170,14 @@ const QAMetrics = ({ setActiveMenu }) => {
         }
       }
 
-      const topicRes = await fetch('http://localhost:3005/api/qa/topics');
+      const topicRes = await fetch('/rdi_mis/api/qa/topics');
       if (topicRes.ok) setTopics(await topicRes.json());
 
-      const catRes = await fetch('http://localhost:3005/api/qa/categories');
+      const catRes = await fetch('/rdi_mis/api/qa/categories');
       if (catRes.ok) setCategories(await catRes.json());
 
       const token = getAuthToken();
-      const inboxRes = await fetch('http://localhost:3005/api/qa/inbox', {
+      const inboxRes = await fetch('/rdi_mis/api/qa/inbox', {
         headers: { 'Authorization': token }
       });
       if (inboxRes.ok) setInbox(await inboxRes.json());
@@ -197,7 +197,7 @@ const QAMetrics = ({ setActiveMenu }) => {
     e.preventDefault();
     try {
       const token = getAuthToken();
-      const url = isEditingFramework ? `http://localhost:3005/api/qa/frameworks/${selectedFrameworkId}` : 'http://localhost:3005/api/qa/frameworks';
+      const url = isEditingFramework ? `/rdi_mis/api/qa/frameworks/${selectedFrameworkId}` : '/rdi_mis/api/qa/frameworks';
       const method = isEditingFramework ? 'PUT' : 'POST';
 
       const res = await fetch(url, {
@@ -233,7 +233,7 @@ const QAMetrics = ({ setActiveMenu }) => {
       onConfirm: async () => {
         try {
           const token = getAuthToken();
-          const res = await fetch(`http://localhost:3005/api/qa/frameworks/${id}`, {
+          const res = await fetch(`/rdi_mis/api/qa/frameworks/${id}`, {
             method: 'DELETE',
             headers: { 'Authorization': token }
           });
@@ -251,7 +251,7 @@ const QAMetrics = ({ setActiveMenu }) => {
     e.preventDefault();
     try {
       const token = getAuthToken();
-      const url = isEditingKpi ? `http://localhost:3005/api/qa/kpis/${editingKpiId}` : 'http://localhost:3005/api/qa/kpis';
+      const url = isEditingKpi ? `/rdi_mis/api/qa/kpis/${editingKpiId}` : '/rdi_mis/api/qa/kpis';
       const method = isEditingKpi ? 'PUT' : 'POST';
 
       // Sync top-level target_value and unit with the first target in the list
@@ -296,7 +296,7 @@ const QAMetrics = ({ setActiveMenu }) => {
 
       const token = getAuthToken();
       // Using Core System Storage API (Port 3001)
-      const res = await fetch('http://localhost:3001/api/storage/upload', {
+      const res = await fetch('/rdi_mis/api/storage/upload', {
         method: 'POST',
         headers: {
           'Authorization': token,
@@ -329,7 +329,7 @@ const QAMetrics = ({ setActiveMenu }) => {
       formData.append('file', file);
 
       const token = getAuthToken();
-      const res = await fetch('http://localhost:3001/api/storage/upload', {
+      const res = await fetch('/rdi_mis/api/storage/upload', {
         method: 'POST',
         headers: { 'Authorization': token, 'X-User-Name': encodeURIComponent(user.name) },
         body: formData
@@ -345,7 +345,7 @@ const QAMetrics = ({ setActiveMenu }) => {
     e.preventDefault();
     try {
       const token = getAuthToken();
-      const url = isEditingTopic ? `http://localhost:3005/api/qa/topics/${editingTopicId}` : 'http://localhost:3005/api/qa/topics';
+      const url = isEditingTopic ? `/rdi_mis/api/qa/topics/${editingTopicId}` : '/rdi_mis/api/qa/topics';
       const method = isEditingTopic ? 'PUT' : 'POST';
 
       if (!viewingFrameworkId && !isEditingTopic) {
@@ -383,7 +383,7 @@ const QAMetrics = ({ setActiveMenu }) => {
       onConfirm: async () => {
         try {
           const token = getAuthToken();
-          const res = await fetch(`http://localhost:3005/api/qa/topics/${id}`, {
+          const res = await fetch(`/rdi_mis/api/qa/topics/${id}`, {
             method: 'DELETE',
             headers: { 'Authorization': token }
           });
@@ -403,7 +403,7 @@ const QAMetrics = ({ setActiveMenu }) => {
     try {
       const token = getAuthToken();
       // 1. Upload to Core Storage
-      const uploadRes = await fetch('http://localhost:3001/api/storage/upload', {
+      const uploadRes = await fetch('/rdi_mis/api/storage/upload', {
         method: 'POST',
         headers: { 'Authorization': token, 'X-User-Name': encodeURIComponent('QA App User') },
         body: formData
@@ -411,7 +411,7 @@ const QAMetrics = ({ setActiveMenu }) => {
       if (uploadRes.ok) {
         const data = await uploadRes.json();
         // 2. Update target in QA Backend
-        const updateRes = await fetch(`http://localhost:3005/api/qa/targets/${targetId}`, {
+        const updateRes = await fetch(`/rdi_mis/api/qa/targets/${targetId}`, {
           method: 'PATCH',
           headers: {
             'Authorization': token,
@@ -443,7 +443,7 @@ const QAMetrics = ({ setActiveMenu }) => {
       onConfirm: async () => {
         try {
           const token = getAuthToken();
-          const res = await fetch(`http://localhost:3005/api/qa/kpis/${id}`, {
+          const res = await fetch(`/rdi_mis/api/qa/kpis/${id}`, {
             method: 'DELETE',
             headers: { 'Authorization': token }
           });
@@ -461,7 +461,7 @@ const QAMetrics = ({ setActiveMenu }) => {
     if (!newCategory.trim()) return;
     try {
       const token = getAuthToken();
-      const res = await fetch('http://localhost:3005/api/qa/categories', {
+      const res = await fetch('/rdi_mis/api/qa/categories', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json', 'Authorization': token },
         body: JSON.stringify({ name: newCategory })
@@ -492,7 +492,7 @@ const QAMetrics = ({ setActiveMenu }) => {
       onConfirm: async () => {
         try {
           const token = getAuthToken();
-          const res = await fetch(`http://localhost:3005/api/qa/categories/${id}`, {
+          const res = await fetch(`/rdi_mis/api/qa/categories/${id}`, {
             method: 'DELETE',
             headers: { 'Authorization': token }
           });
@@ -509,7 +509,7 @@ const QAMetrics = ({ setActiveMenu }) => {
   const handleMap = async (item, kpiId) => {
     try {
       const token = getAuthToken();
-      const res = await fetch('http://localhost:3005/api/qa/mappings', {
+      const res = await fetch('/rdi_mis/api/qa/mappings', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -540,7 +540,7 @@ const QAMetrics = ({ setActiveMenu }) => {
   const handleUnmap = async (mappingId) => {
     try {
       const token = getAuthToken();
-      const res = await fetch(`http://localhost:3005/api/qa/mappings/${mappingId}`, {
+      const res = await fetch(`/rdi_mis/api/qa/mappings/${mappingId}`, {
         method: 'DELETE',
         headers: { 'Authorization': token }
       });
@@ -583,7 +583,7 @@ const QAMetrics = ({ setActiveMenu }) => {
 
   const fetchEvidence = async (kpi) => {
     try {
-      const res = await fetch(`http://localhost:3005/api/qa/kpis/${kpi.id}/evidence`);
+      const res = await fetch(`/rdi_mis/api/qa/kpis/${kpi.id}/evidence`);
       if (res.ok) {
         const data = await res.json();
         setEvidenceModal({ show: true, kpi, data });

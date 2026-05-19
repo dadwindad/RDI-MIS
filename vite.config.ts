@@ -7,7 +7,10 @@ export default defineConfig({
   base: '/rdi_mis/',
   server: {
     proxy: {
-      '/api': 'http://localhost:3001'
+      '/rdi_mis/api': {
+        target: 'http://localhost:3001',
+        rewrite: (path) => path.replace(/^\/rdi_mis/, '')
+      }
     }
   }
 })

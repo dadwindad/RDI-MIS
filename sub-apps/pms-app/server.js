@@ -31,7 +31,7 @@ const requireAuth = (req, res, next) => {
 const logAudit = async (user_name, action, details) => {
   let displayName = user_name;
   try {
-    const res = await fetch('http://localhost:3001/api/users');
+    const res = await fetch('http://core-backend:3001/api/users');
     if (res.ok) {
       const users = await res.json();
       const user = users.find(u => 
@@ -46,7 +46,7 @@ const logAudit = async (user_name, action, details) => {
   }
 
   try {
-    await fetch('http://localhost:3001/api/audit', {
+    await fetch('http://core-backend:3001/api/audit', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ user_name: displayName, action, details })
@@ -172,7 +172,7 @@ const handleBase64Upload = (document_base64, document_name, uploader_name, activ
     const path = storagePath + '/' + finalName;
     const base64Data = document_base64.replace(/^data:.*,/, '');
     fs.writeFileSync(path, base64Data, 'base64');
-    return 'http://localhost:3001/storage/' + finalName;
+    return '/rdi_mis/storage/' + finalName;
   }
   return null;
 };
@@ -361,7 +361,7 @@ app.post('/api/pms/projects/:id/remove-document', requireAuth, (req, res) => {
       // Soft delete from central storage gateway
       try {
         const filename = decodeURIComponent(url.split('/').pop());
-        await fetch(`http://localhost:3001/api/storage/files/${filename}`, { method: 'DELETE' });
+        await fetch(`http://core-backend:3001/api/storage/files/${filename}`, { method: 'DELETE' });
       } catch (e) {
         console.error('Failed to soft delete from core storage:', e);
       }
@@ -409,7 +409,7 @@ app.get('/api/pms/aggregated-data', requireAuth, async (req, res) => {
     // 2. Fetch Activities from Calendar App (Smart Office)
     let activities = [];
     try {
-      const soRes = await fetch('http://localhost:3003/api/activities', {
+      const soRes = await fetch('http://calendar-backend:3003/api/activities', {
         headers: { 'Authorization': req.headers['authorization'] }
       });
       if (soRes.ok) {
