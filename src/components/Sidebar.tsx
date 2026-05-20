@@ -14,16 +14,17 @@ import {
   ChevronDown,
   ChevronRight
 } from 'lucide-react';
-import { db, AppRegistry } from '../services/db';
+import { db, AppRegistry, User } from '../services/db';
 
 interface SidebarProps {
   activeMenu: string;
   setActiveMenu: (menu: string) => void;
   isOpen: boolean;
   setIsOpen: (isOpen: boolean) => void;
+  currentUser: User | null;
 }
 
-const Sidebar: React.FC<SidebarProps> = ({ activeMenu, setActiveMenu, isOpen }) => {
+const Sidebar: React.FC<SidebarProps> = ({ activeMenu, setActiveMenu, isOpen, currentUser }) => {
   const [activeApps, setActiveApps] = useState<AppRegistry[]>([]);
   const [isOrgMenuOpen, setIsOrgMenuOpen] = useState(false);
   const [isSystemMenuOpen, setIsSystemMenuOpen] = useState(false);
@@ -41,6 +42,8 @@ const Sidebar: React.FC<SidebarProps> = ({ activeMenu, setActiveMenu, isOpen }) 
       setIsOrgMenuOpen(true);
     }
   }, [activeMenu]);
+
+  const isStaff = currentUser?.role === 'staff';
 
   return (
     <aside className={`sidebar ${isOpen ? 'open' : 'closed'}`}>
@@ -98,21 +101,25 @@ const Sidebar: React.FC<SidebarProps> = ({ activeMenu, setActiveMenu, isOpen }) 
           </div>
         )}
 
-        <div className="menu-category">Master Data</div>
-        <div className={`menu-item ${activeMenu === 'fiscal-year' ? 'active' : ''}`} onClick={() => setActiveMenu('fiscal-year')}>
-          <CalendarDays size={20} />
-          {isOpen && <span>Fiscal Year</span>}
-        </div>
+        {!isStaff && (
+          <>
+            <div className="menu-category">Master Data</div>
+            <div className={`menu-item ${activeMenu === 'fiscal-year' ? 'active' : ''}`} onClick={() => setActiveMenu('fiscal-year')}>
+              <CalendarDays size={20} />
+              {isOpen && <span>Fiscal Year</span>}
+            </div>
 
-        <div className="menu-category">IAM</div>
-        <div className={`menu-item ${activeMenu === 'users' ? 'active' : ''}`} onClick={() => setActiveMenu('users')}>
-          <Users size={20} />
-          {isOpen && <span>User Management</span>}
-        </div>
-        <div className={`menu-item ${activeMenu === 'roles' ? 'active' : ''}`} onClick={() => setActiveMenu('roles')}>
-          <ShieldCheck size={20} />
-          {isOpen && <span>Roles & Permissions</span>}
-        </div>
+            <div className="menu-category">IAM</div>
+            <div className={`menu-item ${activeMenu === 'users' ? 'active' : ''}`} onClick={() => setActiveMenu('users')}>
+              <Users size={20} />
+              {isOpen && <span>User Management</span>}
+            </div>
+            <div className={`menu-item ${activeMenu === 'roles' ? 'active' : ''}`} onClick={() => setActiveMenu('roles')}>
+              <ShieldCheck size={20} />
+              {isOpen && <span>Roles & Permissions</span>}
+            </div>
+          </>
+        )}
 
         <div 
           className="menu-category" 
@@ -128,10 +135,12 @@ const Sidebar: React.FC<SidebarProps> = ({ activeMenu, setActiveMenu, isOpen }) 
         </div>
         {isSystemMenuOpen && (
           <>
-            <div className={`menu-item ${activeMenu === 'apps' ? 'active' : ''}`} onClick={() => setActiveMenu('apps')}>
-              <Blocks size={20} />
-              {isOpen && <span>App Registry</span>}
-            </div>
+            {!isStaff && (
+              <div className={`menu-item ${activeMenu === 'apps' ? 'active' : ''}`} onClick={() => setActiveMenu('apps')}>
+                <Blocks size={20} />
+                {isOpen && <span>App Registry</span>}
+              </div>
+            )}
             <div className={`menu-item ${activeMenu === 'storage' ? 'active' : ''}`} onClick={() => setActiveMenu('storage')}>
               <FileBox size={20} />
               {isOpen && <span>Storage Gateway</span>}

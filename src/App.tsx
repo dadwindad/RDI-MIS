@@ -76,6 +76,14 @@ function App() {
     }
   }, [activeMenu]);
 
+  React.useEffect(() => {
+    if (currentUser && currentUser.role === 'staff') {
+      if (['apps', 'fiscal-year', 'users', 'roles'].includes(activeMenu)) {
+        setActiveMenu('dashboard');
+      }
+    }
+  }, [activeMenu, currentUser]);
+
   const handleLogin = (user: User) => {
     setCurrentUser(user);
     localStorage.setItem('ricp_current_user', JSON.stringify(user));
@@ -96,16 +104,16 @@ function App() {
 
   return (
     <div className="app-container">
-      <Sidebar activeMenu={activeMenu} setActiveMenu={setActiveMenu} isOpen={sidebarOpen} setIsOpen={setSidebarOpen} />
+      <Sidebar activeMenu={activeMenu} setActiveMenu={setActiveMenu} isOpen={sidebarOpen} setIsOpen={setSidebarOpen} currentUser={currentUser} />
       <div className={`main-content ${sidebarOpen ? 'sidebar-open' : 'sidebar-closed'}`}>
         <Header sidebarOpen={sidebarOpen} setSidebarOpen={setSidebarOpen} onLogout={handleLogout} currentUser={currentUser} setActiveMenu={setActiveMenu} />
         <main className="content-area">
           {activeMenu === 'dashboard' && <Dashboard setActiveMenu={setActiveMenu} />}
           {activeMenu.startsWith('org') && <Organization activeApp={activeMenu} setActiveMenu={setActiveMenu} />}
-          {activeMenu === 'users' && <UserManagement currentUser={currentUser} />}
-          {activeMenu === 'apps' && <AppRegistry currentUser={currentUser} setActiveMenu={setActiveMenu} />}
-          {activeMenu === 'fiscal-year' && <FiscalYear currentUser={currentUser} />}
-          {activeMenu === 'roles' && <RoleMatrix />}
+          {activeMenu === 'users' && currentUser.role !== 'staff' && <UserManagement currentUser={currentUser} />}
+          {activeMenu === 'apps' && currentUser.role !== 'staff' && <AppRegistry currentUser={currentUser} setActiveMenu={setActiveMenu} />}
+          {activeMenu === 'fiscal-year' && currentUser.role !== 'staff' && <FiscalYear currentUser={currentUser} />}
+          {activeMenu === 'roles' && currentUser.role !== 'staff' && <RoleMatrix />}
           {activeMenu === 'audit' && <AuditLogPage />}
           {activeMenu === 'storage' && <StorageGateway currentUser={currentUser} />}
           {activeMenu === 'api-docs' && <ApiDocs />}
