@@ -172,6 +172,7 @@ const Header: React.FC<HeaderProps> = ({ sidebarOpen, setSidebarOpen, onLogout, 
           </div>
         </div>
       )}
+      <div className="header-animation-line" />
     </header>
   );
 };
