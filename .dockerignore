@@ -3,7 +3,6 @@ node_modules
 .gitignore
 *.db
 *.sqlite
-databases
 storage
 dist
 build
