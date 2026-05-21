@@ -11,6 +11,23 @@ app.use(express.json({ limit: 104857600 })); // 100MB
 app.use(express.urlencoded({ limit: 104857600, extended: true }));
 app.use('/uploads', express.static('uploads'));
 
+const smartFetch = async (url, options = {}) => {
+  try {
+    return await fetch(url, options);
+  } catch (err) {
+    if (url.includes('core-backend:3801')) {
+      const fallbackUrl = url.replace('core-backend:3801', 'localhost:3801');
+      console.log(`smartFetch: Fallback from ${url} to ${fallbackUrl}`);
+      return await fetch(fallbackUrl, options);
+    }
+    if (url.includes('calendar-backend:3803')) {
+      const fallbackUrl = url.replace('calendar-backend:3803', 'localhost:3803');
+      console.log(`smartFetch: Fallback from ${url} to ${fallbackUrl}`);
+      return await fetch(fallbackUrl, options);
+    }
+    throw err;
+  }
+};
 
 // Auth Middleware (จำลองรับ JWT จาก Core App)
 const requireAuth = (req, res, next) => {
@@ -31,7 +48,7 @@ const requireAuth = (req, res, next) => {
 const logAudit = async (user_name, action, details) => {
   let displayName = user_name;
   try {
-    const res = await fetch('http://core-backend:3001/api/users');
+    const res = await smartFetch('http://core-backend:3801/api/users');
     if (res.ok) {
       const users = await res.json();
       const user = users.find(u => 
@@ -46,7 +63,7 @@ const logAudit = async (user_name, action, details) => {
   }
 
   try {
-    await fetch('http://core-backend:3001/api/audit', {
+    await smartFetch('http://core-backend:3801/api/audit', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ user_name: displayName, action, details })
@@ -361,7 +378,7 @@ app.post('/api/pms/projects/:id/remove-document', requireAuth, (req, res) => {
       // Soft delete from central storage gateway
       try {
         const filename = decodeURIComponent(url.split('/').pop());
-        await fetch(`http://core-backend:3001/api/storage/files/${filename}`, { method: 'DELETE' });
+        await smartFetch(`http://core-backend:3801/api/storage/files/${filename}`, { method: 'DELETE' });
       } catch (e) {
         console.error('Failed to soft delete from core storage:', e);
       }
@@ -409,7 +426,7 @@ app.get('/api/pms/aggregated-data', requireAuth, async (req, res) => {
     // 2. Fetch Activities from Calendar App (Smart Office)
     let activities = [];
     try {
-      const soRes = await fetch('http://calendar-backend:3003/api/activities', {
+      const soRes = await smartFetch('http://calendar-backend:3803/api/activities', {
         headers: { 'Authorization': req.headers['authorization'] }
       });
       if (soRes.ok) {
@@ -458,5 +475,5 @@ app.use((err, req, res, next) => {
   res.status(err.status || 500).json({ error: err.message || 'Internal Server Error' });
 });
 
-const PORT = 3002;
+const PORT = 3802;
 app.listen(PORT, () => console.log(`🚀 PMS Backend Server running on http://localhost:${PORT}`));

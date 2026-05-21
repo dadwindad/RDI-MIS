@@ -115,16 +115,23 @@ db.serialize(() => {
     }
   });
 
-  // Seed initial roles if the table is empty
-  db.get("SELECT COUNT(*) as count FROM roles", (err, row) => {
-    if (row && row.count === 0) {
-      console.log("Seeding initial roles to SQLite...");
-      const stmt = db.prepare("INSERT INTO roles (name, permissions) VALUES (?, ?)");
-      stmt.run('System Admin', JSON.stringify(['pms:create', 'pms:approve', 'pms:read_all', 'finance:view', 'finance:approve', 'finance:disburse', 'core:manage_apps', 'core:manage_users']));
-      stmt.run('Researcher', JSON.stringify(['pms:create']));
-      stmt.run('Finance Officer', JSON.stringify(['finance:view', 'finance:approve', 'finance:disburse']));
-      stmt.run('Director', JSON.stringify(['pms:read_all', 'finance:view']));
-      stmt.finalize();
+  // Seed initial roles to match user types (admin, staff, manager)
+  db.all("SELECT name FROM roles", [], (err, rows) => {
+    const roleNames = rows ? rows.map(r => r.name).sort() : [];
+    const expectedRoles = ['admin', 'manager', 'staff'].sort();
+    
+    const isDifferent = roleNames.length !== expectedRoles.length || 
+                        !roleNames.every((val, index) => val === expectedRoles[index]);
+                        
+    if (isDifferent) {
+      console.log("Wiping old roles and seeding correct roles (admin, manager, staff) to SQLite...");
+      db.run("DELETE FROM roles", [], () => {
+        const stmt = db.prepare("INSERT INTO roles (name, permissions) VALUES (?, ?)");
+        stmt.run('admin', JSON.stringify(['pms:create', 'pms:approve', 'pms:read_all', 'finance:view', 'finance:approve', 'finance:disburse', 'core:manage_apps', 'core:manage_users']));
+        stmt.run('manager', JSON.stringify(['pms:create', 'pms:read_all', 'finance:view', 'finance:approve']));
+        stmt.run('staff', JSON.stringify(['pms:create', 'finance:view']));
+        stmt.finalize();
+      });
     }
   });
 
@@ -154,7 +161,7 @@ db.serialize(() => {
     if (row && row.count === 0) {
       console.log("Seeding initial apps to SQLite...");
       const stmt = db.prepare("INSERT INTO app_registry VALUES (?, ?, ?, ?, ?, ?)");
-      stmt.run('org-pms', 'Project Management (PMS)', 'http://localhost:3002/remoteEntry.js', 'http://localhost:3002', '["admin","manager","staff"]', 'Active');
+      stmt.run('org-pms', 'Project Management (PMS)', 'http://localhost:3802/remoteEntry.js', 'http://localhost:3802', '["admin","manager","staff"]', 'Active');
       stmt.run('org-ec', 'Ethics Committee (EC)', 'https://ec.research.ac.th/remoteEntry.js', 'https://api-ec.research.ac.th', '["admin","manager"]', 'Active');
       stmt.run('org-finance', 'Financial System', 'https://finance.research.ac.th/remoteEntry.js', 'https://api-finance.research.ac.th', '["admin","manager"]', 'Maintenance');
       stmt.run('org-ip', 'IP Registration', 'https://ip.research.ac.th/remoteEntry.js', 'https://api-ip.research.ac.th', '["admin","manager"]', 'Maintenance');
@@ -379,14 +386,30 @@ app.post('/api/apps', (req, res) => {
 });
 
 app.put('/api/apps/:id', (req, res) => {
-  const { name, entry_url, api_endpoint, required_roles, status } = req.body;
   const userName = req.headers['x-user-name'] || 'System';
-  db.run("UPDATE app_registry SET name = ?, entry_url = ?, api_endpoint = ?, required_roles = ?, status = ? WHERE app_id = ?",
-    [name, entry_url, api_endpoint, required_roles, status, req.params.id], function(err) {
-      if (err) return res.status(500).json({ error: err.message });
-      logAudit(userName, 'UPDATE_APP', `Updated sub-app: ${req.params.id}`);
-      res.json({ success: true, updated: this.changes });
-    });
+  const fields = [];
+  const params = [];
+  
+  const allowed = ['name', 'entry_url', 'api_endpoint', 'required_roles', 'status'];
+  allowed.forEach(field => {
+    if (req.body[field] !== undefined) {
+      fields.push(`${field} = ?`);
+      params.push(req.body[field]);
+    }
+  });
+
+  if (fields.length === 0) {
+    return res.json({ success: true, message: 'No fields to update' });
+  }
+
+  params.push(req.params.id);
+  const sql = `UPDATE app_registry SET ${fields.join(', ')} WHERE app_id = ?`;
+
+  db.run(sql, params, function(err) {
+    if (err) return res.status(500).json({ error: err.message });
+    logAudit(userName, 'UPDATE_APP', `Updated sub-app: ${req.params.id}`);
+    res.json({ success: true, updated: this.changes });
+  });
 });
 
 app.delete('/api/apps/:id', (req, res) => {
@@ -496,7 +519,7 @@ app.post('/api/storage/clear-deleted', (req, res) => {
   });
 });
 
-const PORT = 3001;
+const PORT = 3801;
 app.listen(PORT, () => {
   console.log(`SQLite Backend Server running on http://localhost:${PORT}`);
 });

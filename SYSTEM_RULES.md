@@ -52,7 +52,7 @@
 - **Activity Source:** ต้องบันทึกแหล่งที่มา (Source) ของกิจกรรมเสมอ (เช่น ชื่อ Sub-App หรือระบบย่อยที่เกิดกิจกรรม) เพื่อให้สามารถแยกแยะและตรวจสอบย้อนกลับได้ง่าย
 
 ## 8. Local Storage Gateway (ระบบจัดเก็บไฟล์จำลอง)
-- **Centralized Storage**: ระบบใช้ Core App (Port 3001) เป็น Gateway ในการจัดการไฟล์ทั้งหมด โดยเก็บไฟล์ไว้ที่โฟลเดอร์ `storage` ใน Root directory
+- **Centralized Storage**: ระบบใช้ Core App (Port 3801) เป็น Gateway ในการจัดการไฟล์ทั้งหมด โดยเก็บไฟล์ไว้ที่โฟลเดอร์ `storage` ใน Root directory
 - **Filename Pattern**: การบันทึกไฟล์ลงดิสก์ต้องใช้รูปแบบชื่อไฟล์ที่รวม Metadata เสมอ: `[appSource]_[activity]_[uploader]_Timestamp-Random_OriginalName` เพื่อให้สามารถระบุที่มาและผู้รับผิดชอบได้
 - **Soft Delete Mechanism**: เมื่อมีการลบไฟล์ผ่าน API ห้ามลบไฟล์จริงออกจากดิสก์ทันที ให้เปลี่ยนชื่อไฟล์โดยต่อท้ายด้วย `.deleted` เสมอ
 - **Bulk Cleanup**: การลบไฟล์จริงออกจากดิสก์ (Hard Delete) จะทำได้ผ่าน Endpoint `/api/storage/clear-deleted` เท่านั้น ซึ่งจะลบเฉพาะไฟล์ที่ลงท้ายด้วย `.deleted`

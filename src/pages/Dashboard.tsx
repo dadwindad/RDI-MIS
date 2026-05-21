@@ -139,7 +139,6 @@ const Dashboard: React.FC<{ setActiveMenu: (menu: string) => void }> = ({ setAct
             <tr>
               <th>App ID</th>
               <th>App Name</th>
-              <th>Endpoint URL</th>
               <th>Required Roles</th>
               <th>Status</th>
             </tr>
@@ -147,18 +146,17 @@ const Dashboard: React.FC<{ setActiveMenu: (menu: string) => void }> = ({ setAct
           <tbody>
             {isLoading ? (
               <tr>
-                <td colSpan={5} style={{ textAlign: 'center', padding: '2rem' }}>Loading data...</td>
+                <td colSpan={4} style={{ textAlign: 'center', padding: '2rem' }}>Loading data...</td>
               </tr>
             ) : apps.length === 0 ? (
               <tr>
-                <td colSpan={5} style={{ textAlign: 'center', padding: '2rem' }}>No apps registered.</td>
+                <td colSpan={4} style={{ textAlign: 'center', padding: '2rem' }}>No apps registered.</td>
               </tr>
             ) : (
               apps.map((app: any) => (
                 <tr key={app.app_id || app.id}>
                   <td style={{ fontFamily: 'monospace', fontWeight: 500 }}>{app.app_id || app.id}</td>
                   <td style={{ fontWeight: 600 }}>{app.name}</td>
-                  <td><a href={app.api_endpoint || app.endpoint_url} target="_blank" rel="noreferrer" style={{ color: 'var(--accent-color)', textDecoration: 'none' }}>{app.api_endpoint || app.endpoint_url}</a></td>
                   <td>
                     <div style={{ display: 'flex', gap: '0.25rem', flexWrap: 'wrap' }}>
                       {app.required_roles ? (() => {

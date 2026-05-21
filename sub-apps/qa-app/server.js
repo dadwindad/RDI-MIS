@@ -246,10 +246,19 @@ app.get('/api/qa/inbox', requireAuth, async (req, res) => {
     // 1. Fetch Aggregated Data from PMS
     let pmsAggregatedData = [];
     try {
-      const pmsRes = await fetch('http://pms-backend:3002/api/pms/aggregated-data', {
-        headers: { 'Authorization': req.headers['authorization'] }
-      });
-      if (pmsRes.ok) {
+      let pmsRes;
+      try {
+        pmsRes = await fetch('http://pms-backend:3802/api/pms/aggregated-data', {
+          headers: { 'Authorization': req.headers['authorization'] }
+        });
+      } catch (dockerErr) {
+        console.log('QA Backend: pms-backend unresolved, falling back to localhost...');
+        pmsRes = await fetch('http://localhost:3802/api/pms/aggregated-data', {
+          headers: { 'Authorization': req.headers['authorization'] }
+        });
+      }
+
+      if (pmsRes && pmsRes.ok) {
         pmsAggregatedData = await pmsRes.json();
       }
     } catch (e) { 
@@ -376,5 +385,5 @@ app.patch('/api/qa/targets/:id', requireAuth, (req, res) => {
   );
 });
 
-const PORT = 3005;
+const PORT = 3805;
 app.listen(PORT, () => console.log(`🚀 QA Sub-App running on http://localhost:${PORT}`));

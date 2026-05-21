@@ -12,6 +12,7 @@ const AppRegistry: React.FC<AppRegistryProps> = ({ currentUser, setActiveMenu })
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [isEditing, setIsEditing] = useState(false);
   const [formData, setFormData] = useState<IAppRegistry>({ app_id: '', name: '', entry_url: '', api_endpoint: '', required_roles: '["admin"]', status: 'Maintenance' });
+  const [selectedRoles, setSelectedRoles] = useState<string[]>(['admin']);
   const [toast, setToast] = useState<{message: string, type: 'success' | 'error'} | null>(null);
   const [confirmDialog, setConfirmDialog] = useState<{message: string, onConfirm: () => void} | null>(null);
 
@@ -35,16 +36,20 @@ const AppRegistry: React.FC<AppRegistryProps> = ({ currentUser, setActiveMenu })
 
   const handleSave = async (e: React.FormEvent) => {
     e.preventDefault();
-    // Validate JSON parsing for required_roles
-    try {
-      JSON.parse(formData.required_roles);
-    } catch {
-      showToast('Required Roles must be valid JSON array, e.g. ["admin","staff"]', 'error');
+    if (selectedRoles.length === 0) {
+      showToast('Please select at least one required role.', 'error');
       return;
     }
 
+    const updatedData = {
+      ...formData,
+      entry_url: '',
+      api_endpoint: '',
+      required_roles: JSON.stringify(selectedRoles)
+    };
+
     if (isEditing) {
-      const success = await db.updateApp(formData.app_id, formData);
+      const success = await db.updateApp(formData.app_id, updatedData);
       if (success) {
         setIsModalOpen(false);
         fetchApps();
@@ -53,7 +58,7 @@ const AppRegistry: React.FC<AppRegistryProps> = ({ currentUser, setActiveMenu })
         showToast('Failed to update App.', 'error');
       }
     } else {
-      const success = await db.addApp(formData);
+      const success = await db.addApp(updatedData);
       if (success) {
         setIsModalOpen(false);
         fetchApps();
@@ -66,6 +71,7 @@ const AppRegistry: React.FC<AppRegistryProps> = ({ currentUser, setActiveMenu })
 
   const handleEdit = (app: IAppRegistry) => {
     setFormData(app);
+    setSelectedRoles(parseRoles(app.required_roles));
     setIsEditing(true);
     setIsModalOpen(true);
   };
@@ -86,7 +92,7 @@ const AppRegistry: React.FC<AppRegistryProps> = ({ currentUser, setActiveMenu })
   const toggleStatus = async (app: IAppRegistry) => {
     const nextStatus = app.status === 'Active' ? 'Maintenance' : 'Active';
     confirmAction(`Change status of ${app.app_id} to ${nextStatus}?`, async () => {
-      const success = await db.updateApp(app.app_id, { status: nextStatus });
+      const success = await db.updateApp(app.app_id, { ...app, status: nextStatus });
       if (success) {
         fetchApps();
         showToast(`Status updated to ${nextStatus}`, 'success');
@@ -111,7 +117,7 @@ const AppRegistry: React.FC<AppRegistryProps> = ({ currentUser, setActiveMenu })
           <p className="page-subtitle">FR-REG-01: Manage and register Micro-Frontend Sub-Apps.</p>
         </div>
         {currentUser.role === 'admin' && (
-          <button onClick={() => { setIsEditing(false); setFormData({ app_id: 'org-', name: '', entry_url: '', api_endpoint: '', required_roles: '["admin"]', status: 'Maintenance' }); setIsModalOpen(true); }} style={{ 
+          <button onClick={() => { setIsEditing(false); setFormData({ app_id: 'org-', name: '', entry_url: '', api_endpoint: '', required_roles: '["admin"]', status: 'Maintenance' }); setSelectedRoles(['admin']); setIsModalOpen(true); }} style={{ 
             backgroundColor: 'var(--accent-color)', color: 'white', border: 'none', 
             padding: '0.75rem 1.5rem', borderRadius: '0.5rem', display: 'flex', gap: '0.5rem',
             alignItems: 'center', cursor: 'pointer', fontWeight: 600
@@ -158,14 +164,6 @@ const AppRegistry: React.FC<AppRegistryProps> = ({ currentUser, setActiveMenu })
                 <div style={{ fontWeight: 500, fontFamily: 'monospace' }}>{app.app_id}</div>
               </div>
               <div>
-                <div style={{ fontSize: '0.75rem', color: 'var(--text-secondary)', textTransform: 'uppercase' }}>Entry URL</div>
-                <div style={{ fontWeight: 500, wordBreak: 'break-all' }}>{app.entry_url}</div>
-              </div>
-              <div>
-                <div style={{ fontSize: '0.75rem', color: 'var(--text-secondary)', textTransform: 'uppercase' }}>API Endpoint</div>
-                <div style={{ fontWeight: 500, wordBreak: 'break-all' }}>{app.api_endpoint}</div>
-              </div>
-              <div>
                 <div style={{ fontSize: '0.75rem', color: 'var(--text-secondary)', textTransform: 'uppercase' }}>Required Roles</div>
                 <div style={{ display: 'flex', gap: '0.5rem', flexWrap: 'wrap', marginTop: '0.25rem' }}>
                   {parseRoles(app.required_roles).map(r => (
@@ -208,16 +206,29 @@ const AppRegistry: React.FC<AppRegistryProps> = ({ currentUser, setActiveMenu })
                 <input type="text" value={formData.name} onChange={e => setFormData({...formData, name: e.target.value})} style={{ width: '100%', padding: '0.75rem', border: '1px solid var(--border-color)', borderRadius: '0.5rem' }} required />
               </div>
               <div>
-                <label style={{ display: 'block', marginBottom: '0.5rem', fontWeight: 500, fontSize: '0.875rem' }}>Remote Entry URL (MFE Source)</label>
-                <input type="url" placeholder="http://localhost:3002/remoteEntry.js" value={formData.entry_url} onChange={e => setFormData({...formData, entry_url: e.target.value})} style={{ width: '100%', padding: '0.75rem', border: '1px solid var(--border-color)', borderRadius: '0.5rem' }} required />
-              </div>
-              <div>
-                <label style={{ display: 'block', marginBottom: '0.5rem', fontWeight: 500, fontSize: '0.875rem' }}>API Endpoint Base</label>
-                <input type="url" placeholder="http://localhost:3002" value={formData.api_endpoint} onChange={e => setFormData({...formData, api_endpoint: e.target.value})} style={{ width: '100%', padding: '0.75rem', border: '1px solid var(--border-color)', borderRadius: '0.5rem' }} required />
-              </div>
-              <div>
-                <label style={{ display: 'block', marginBottom: '0.5rem', fontWeight: 500, fontSize: '0.875rem' }}>Required Roles (JSON Array)</label>
-                <input type="text" placeholder='["admin", "manager"]' value={formData.required_roles} onChange={e => setFormData({...formData, required_roles: e.target.value})} style={{ width: '100%', padding: '0.75rem', border: '1px solid var(--border-color)', borderRadius: '0.5rem' }} required />
+                <label style={{ display: 'block', marginBottom: '0.5rem', fontWeight: 500, fontSize: '0.875rem' }}>Required Roles</label>
+                <div style={{ display: 'flex', gap: '1.25rem', marginTop: '0.5rem', padding: '0.5rem 0' }}>
+                  {['admin', 'manager', 'staff'].map(role => {
+                    const isChecked = selectedRoles.includes(role);
+                    return (
+                      <label key={role} style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', cursor: 'pointer', fontSize: '0.875rem' }}>
+                        <input
+                          type="checkbox"
+                          checked={isChecked}
+                          onChange={(e) => {
+                            if (e.target.checked) {
+                              setSelectedRoles([...selectedRoles, role]);
+                            } else {
+                              setSelectedRoles(selectedRoles.filter(r => r !== role));
+                            }
+                          }}
+                          style={{ cursor: 'pointer' }}
+                        />
+                        <span style={{ textTransform: 'capitalize' }}>{role}</span>
+                      </label>
+                    );
+                  })}
+                </div>
               </div>
               <div>
                 <label style={{ display: 'block', marginBottom: '0.5rem', fontWeight: 500, fontSize: '0.875rem' }}>Initial Status</label>

@@ -4,14 +4,41 @@ import { db, Role } from '../services/db';
 
 const RoleMatrix: React.FC = () => {
   const [roles, setRoles] = useState<Role[]>([]);
-  const permissions = [
-    { group: 'Project Mgmt (PMS)', items: ['pms:create', 'pms:approve', 'pms:read_all'] },
-    { group: 'Financial System', items: ['finance:view', 'finance:approve', 'finance:disburse'] },
-    { group: 'Core Platform', items: ['core:manage_apps', 'core:manage_users'] }
-  ];
+  const [permissions, setPermissions] = useState<{ group: string; items: string[] }[]>([]);
 
   useEffect(() => {
-    db.getRoles().then(setRoles);
+    const loadMatrixData = async () => {
+      const dbRoles = await db.getRoles();
+      setRoles(dbRoles);
+
+      const registeredApps = await db.getApps();
+      const dynamicPerms = registeredApps.map(app => {
+        const prefix = app.app_id.startsWith('org-') ? app.app_id.substring(4) : app.app_id;
+        let items: string[] = [];
+        if (prefix === 'pms') {
+          items = ['pms:create', 'pms:approve', 'pms:read_all'];
+        } else if (prefix === 'calendar') {
+          items = ['calendar:create', 'calendar:edit', 'calendar:view'];
+        } else if (prefix === 'qa') {
+          items = ['qa:manage', 'qa:view'];
+        } else {
+          items = [`${prefix}:view`, `${prefix}:edit`, `${prefix}:manage`];
+        }
+        return {
+          group: app.name,
+          items
+        };
+      });
+
+      const coreGroup = {
+        group: 'Core Platform',
+        items: ['core:manage_apps', 'core:manage_users']
+      };
+
+      setPermissions([...dynamicPerms, coreGroup]);
+    };
+
+    loadMatrixData();
   }, []);
 
   const handleCheckboxChange = async (role: Role, perm: string, checked: boolean) => {

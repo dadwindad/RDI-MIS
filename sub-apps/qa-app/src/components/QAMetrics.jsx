@@ -295,7 +295,7 @@ const QAMetrics = ({ setActiveMenu }) => {
       formData.append('file', file);
 
       const token = getAuthToken();
-      // Using Core System Storage API (Port 3001)
+      // Using Core System Storage API (Port 3801)
       const res = await fetch('/rdi_mis/api/storage/upload', {
         method: 'POST',
         headers: {
@@ -1148,7 +1148,7 @@ const QAMetrics = ({ setActiveMenu }) => {
                           </div>
                           {topic.evidence_name && (
                             <a
-                              href={`http://localhost:3005${topic.evidence_path}`}
+                              href={`http://localhost:3805${topic.evidence_path}`}
                               target="_blank"
                               rel="noreferrer"
                               style={{ display: 'inline-flex', alignItems: 'center', gap: '0.3rem', fontSize: '0.75rem', color: 'var(--accent-color)', marginTop: '0.75rem', textDecoration: 'none', fontWeight: 600, backgroundColor: 'var(--accent-light)', padding: '0.25rem 0.6rem', borderRadius: '0.4rem' }}
@@ -1791,7 +1791,7 @@ const QAMetrics = ({ setActiveMenu }) => {
                       </div>
                       {t.attachment_path && (
                         <a
-                          href={`http://localhost:3001${t.attachment_path}`}
+                          href={`http://localhost:3801${t.attachment_path}`}
                           target="_blank"
                           rel="noreferrer"
                           download

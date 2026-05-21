@@ -64,7 +64,7 @@ const ProjectDashboard = () => {
         throw new Error('API Error');
       }
     } catch (e) {
-      setErrorMsg('Cannot connect to PMS Backend. Please ensure that PMS Server (Port 3002) is running.');
+      setErrorMsg('Cannot connect to PMS Backend. Please ensure that PMS Server (Port 3802) is running.');
     }
   };
 
@@ -173,7 +173,7 @@ const ProjectDashboard = () => {
         fetchProjects();
       }
     } catch (e) {
-      alert("Failed to save. Is the PMS backend running on port 3002?");
+      alert("Failed to save. Is the PMS backend running on port 3802?");
     }
   };
 
