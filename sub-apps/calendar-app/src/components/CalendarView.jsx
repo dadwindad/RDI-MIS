@@ -93,7 +93,7 @@ const CalendarView = () => {
 
   const fetchActivityTypes = async () => {
     try {
-      const res = await fetch('http://localhost:3803/api/activity-types');
+      const res = await fetch('/rdi_mis/api/calendar/activity-types');
       const data = await res.json();
       setActivityTypes(data);
     } catch (e) {
@@ -107,7 +107,7 @@ const CalendarView = () => {
       const payload = btoa(JSON.stringify({ id: 'user-1', name: 'Test User', role: 'admin' }));
       const token = `Bearer dummyHeader.${payload}.dummySignature`;
 
-      const url = editingTypeId ? `http://localhost:3803/api/activity-types/${editingTypeId}` : 'http://localhost:3803/api/activity-types';
+      const url = editingTypeId ? `/rdi_mis/api/calendar/activity-types/${editingTypeId}` : '/rdi_mis/api/calendar/activity-types';
       const method = editingTypeId ? 'PUT' : 'POST';
 
       const res = await fetch(url, {
@@ -134,7 +134,7 @@ const CalendarView = () => {
         const payload = btoa(JSON.stringify({ id: 'user-1', name: 'Test User', role: 'admin' }));
         const token = `Bearer dummyHeader.${payload}.dummySignature`;
 
-        const res = await fetch(`http://localhost:3803/api/activity-types/${id}`, {
+        const res = await fetch(`/rdi_mis/api/calendar/activity-types/${id}`, {
           method: 'DELETE',
           headers: { 'Authorization': token }
         });
@@ -161,7 +161,7 @@ const CalendarView = () => {
       const start = new Date(currentDate.getFullYear(), currentDate.getMonth(), 1).toISOString().split('T')[0];
       const end = new Date(currentDate.getFullYear(), currentDate.getMonth() + 1, 0).toISOString().split('T')[0];
 
-      const response = await fetch(`http://localhost:3803/api/calendar/events?start_date=${start}&end_date=${end}`, {
+      const response = await fetch(`/rdi_mis/api/calendar/calendar/events?start_date=${start}&end_date=${end}`, {
         headers: { 'Authorization': token }
       });
       const data = await response.json();
@@ -272,7 +272,7 @@ const CalendarView = () => {
         storage_path = `http://localhost:3801${uploadData.path}`;
       }
 
-      const url = newEvent.id ? `/rdi_mis/api/activities/${newEvent.id}` : '/rdi_mis/api/activities';
+      const url = newEvent.id ? `/rdi_mis/api/calendar/activities/${newEvent.id}` : '/rdi_mis/api/calendar/activities';
       const method = newEvent.id ? 'PUT' : 'POST';
 
       const actRes = await fetch(url, {
@@ -330,7 +330,7 @@ const CalendarView = () => {
         const payload = btoa(unescape(encodeURIComponent(JSON.stringify({ id: 'user-1', name: userName, role: 'admin' }))));
         const token = `Bearer dummyHeader.${payload}.dummySignature`;
 
-        const res = await fetch(`/rdi_mis/api/activities/${id}`, {
+        const res = await fetch(`/rdi_mis/api/calendar/activities/${id}`, {
           method: 'DELETE',
           headers: { 'Authorization': token }
         });

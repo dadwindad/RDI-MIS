@@ -48,7 +48,7 @@ const KanbanBoard = ({ currentUser }) => {
   const fetchBoardData = async () => {
     setLoading(true);
     try {
-      const response = await fetch('http://localhost:3803/api/smart-office/documents/board', {
+      const response = await fetch('/rdi_mis/api/calendar/smart-office/documents/board', {
         headers: {
           'Authorization': `Bearer ${generateMockToken()}`
         }
@@ -111,7 +111,7 @@ const KanbanBoard = ({ currentUser }) => {
     setMovingCardId(cardId);
 
     try {
-      const response = await fetch(`http://localhost:3803/api/smart-office/documents/${cardId}/status`, {
+      const response = await fetch(`/rdi_mis/api/calendar/smart-office/documents/${cardId}/status`, {
         method: 'PATCH',
         headers: {
           'Content-Type': 'application/json',
@@ -359,7 +359,7 @@ const KanbanBoard = ({ currentUser }) => {
                                 message: `คุณแน่ใจหรือไม่ว่าต้องการลบการ์ดงาน "${doc.title}"?`,
                                 onConfirm: async () => {
                                   try {
-                                    const response = await fetch(`http://localhost:3803/api/documents/${doc.id}`, {
+                                    const response = await fetch(`/rdi_mis/api/calendar/documents/${doc.id}`, {
                                       method: 'DELETE',
                                       headers: {
                                         'Authorization': `Bearer ${generateMockToken()}`
@@ -538,7 +538,7 @@ const KanbanBoard = ({ currentUser }) => {
                     return;
                   }
                   try {
-                    const response = await fetch('http://localhost:3803/api/documents', {
+                    const response = await fetch('/rdi_mis/api/calendar/documents', {
                       method: 'POST',
                       headers: {
                         'Content-Type': 'application/json',
@@ -682,7 +682,7 @@ const KanbanBoard = ({ currentUser }) => {
                     return;
                   }
                   try {
-                    const response = await fetch(`http://localhost:3803/api/documents/${editingDoc.id}`, {
+                    const response = await fetch(`/rdi_mis/api/calendar/documents/${editingDoc.id}`, {
                       method: 'PUT',
                       headers: {
                         'Content-Type': 'application/json',

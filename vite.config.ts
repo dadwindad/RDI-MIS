@@ -11,6 +11,10 @@ export default defineConfig({
         target: 'http://localhost:3802',
         rewrite: (path) => path.replace(/^\/rdi_mis/, '')
       },
+      '/rdi_mis/api/calendar': {
+        target: 'http://localhost:3803',
+        rewrite: (path) => path.replace(/^\/rdi_mis\/api\/calendar/, '/api')
+      },
       '/rdi_mis/api/activities': {
         target: 'http://localhost:3803',
         rewrite: (path) => path.replace(/^\/rdi_mis/, '')

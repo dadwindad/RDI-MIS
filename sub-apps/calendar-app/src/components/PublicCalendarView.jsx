@@ -16,7 +16,7 @@ const PublicCalendarView = () => {
 
   const fetchActivityTypes = async () => {
     try {
-      const res = await fetch('http://localhost:3803/api/activity-types');
+      const res = await fetch('/rdi_mis/api/calendar/activity-types');
       const data = await res.json();
       setActivityTypes(data);
     } catch (e) {
@@ -30,7 +30,7 @@ const PublicCalendarView = () => {
       const start = new Date(currentDate.getFullYear(), currentDate.getMonth(), 1).toISOString().split('T')[0];
       const end = new Date(currentDate.getFullYear(), currentDate.getMonth() + 1, 0).toISOString().split('T')[0];
 
-      const response = await fetch(`http://localhost:3803/api/public/events?start_date=${start}&end_date=${end}`);
+      const response = await fetch(`/rdi_mis/api/calendar/public/events?start_date=${start}&end_date=${end}`);
       const data = await response.json();
       if (Array.isArray(data)) {
         setEvents(data);

@@ -282,6 +282,34 @@ app.put('/api/users/:id', (req, res) => {
   }
 });
 
+// Self-update profile (username, name, password only — no role/dept change)
+app.put('/api/users/:id/profile', (req, res) => {
+  const { username, name, password } = req.body;
+  const id = req.params.id;
+
+  const finish = () => {
+    db.get("SELECT id, username, name, role, dept, status FROM users WHERE id = ?", [id], (e, row) => {
+      if (e || !row) return res.status(404).json({ error: 'User not found' });
+      logAudit(name || 'User', 'PROFILE_UPDATE', `User ID ${id} updated their profile`);
+      res.json({ success: true, user: row });
+    });
+  };
+
+  if (password) {
+    db.run("UPDATE users SET username = ?, name = ?, password = ? WHERE id = ?",
+      [username, name, password, id], function(err) {
+        if (err) return res.status(500).json({ error: err.message });
+        finish();
+      });
+  } else {
+    db.run("UPDATE users SET username = ?, name = ? WHERE id = ?",
+      [username, name, id], function(err) {
+        if (err) return res.status(500).json({ error: err.message });
+        finish();
+      });
+  }
+});
+
 // Create Audit Log
 app.post('/api/audit', (req, res) => {
   const { user_name, action, details } = req.body;
