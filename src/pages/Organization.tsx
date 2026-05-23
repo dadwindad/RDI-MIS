@@ -185,7 +185,7 @@ const Organization: React.FC<OrganizationProps> = ({ activeApp, setActiveMenu })
               position: 'relative'
             }}
           >
-            <div style={{ position: 'absolute', top: '0.75rem', right: '0.75rem', color: 'var(--text-secondary)', opacity: 0.35 }}>
+            <div className="grip-handle-container">
               <GripVertical size={18} />
             </div>
             <div style={{ color: getAppColor(app.app_id), marginBottom: '1rem' }}>

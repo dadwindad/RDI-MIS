@@ -3,6 +3,18 @@ import { Calendar as CalendarIcon, Clock, MapPin, ChevronLeft, ChevronRight, Che
 import './Calendar.css';
 
 const PublicCalendarView = () => {
+  const getStorageUrl = (path) => {
+    if (!path) return '';
+    let cleanPath = path.replace(/^https?:\/\/localhost:\d+\/storage/, '/rdi_mis/storage');
+    if (cleanPath.startsWith('/storage')) {
+      cleanPath = '/rdi_mis' + cleanPath;
+    }
+    if (cleanPath.startsWith('/')) {
+      return window.location.origin + cleanPath;
+    }
+    return cleanPath;
+  };
+
   const [events, setEvents] = useState([]);
   const [loading, setLoading] = useState(true);
   const [filter, setFilter] = useState('all');
@@ -314,7 +326,7 @@ const PublicCalendarView = () => {
                           style={{ flexShrink: 0, cursor: 'pointer', color: 'var(--accent-color)' }}
                           onClick={(e) => {
                             e.stopPropagation();
-                            window.open(event.storage_path, '_blank');
+                            window.open(getStorageUrl(event.storage_path), '_blank');
                           }}
                           title="เปิดดูไฟล์แนบ"
                         />
@@ -399,7 +411,7 @@ const PublicCalendarView = () => {
                 <div>
                   <div style={{ fontWeight: 600 }}>ไฟล์แนบ / เอกสารต้นเรื่อง</div>
                   {selectedEvent.storage_path ? (
-                    <a href="#" onClick={(e) => { e.preventDefault(); window.open(selectedEvent.storage_path, '_blank'); }} style={{ color: 'var(--accent-color)' }}>
+                    <a href="#" onClick={(e) => { e.preventDefault(); window.open(getStorageUrl(selectedEvent.storage_path), '_blank'); }} style={{ color: 'var(--accent-color)' }}>
                       เปิดดูไฟล์แนบ
                     </a>
                   ) : (
