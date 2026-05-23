@@ -269,7 +269,7 @@ const CalendarView = () => {
         }
 
         const uploadData = await uploadRes.json();
-        storage_path = `http://localhost:3801${uploadData.path}`;
+        storage_path = `/rdi_mis${uploadData.path}`;
       }
 
       const url = newEvent.id ? `/rdi_mis/api/calendar/activities/${newEvent.id}` : '/rdi_mis/api/calendar/activities';

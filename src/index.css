@@ -446,3 +446,26 @@ tr:hover td {
   from { opacity: 0; transform: translateY(-6px); }
   to   { opacity: 1; transform: translateY(0); }
 }
+
+/* Drag and Drop layout for Organization apps */
+.app-card-draggable {
+  position: relative;
+  transition: transform 0.2s, box-shadow 0.2s, border-color 0.2s, opacity 0.2s;
+}
+
+.app-card-draggable.dragging {
+  opacity: 0.4;
+  border: 2px dashed var(--accent-color) !important;
+  transform: scale(0.98);
+}
+
+.app-card-draggable.edit-mode {
+  border: 1px dashed var(--accent-color) !important;
+  animation: editModePulse 2.5s infinite;
+}
+
+@keyframes editModePulse {
+  0% { border-color: rgba(59, 130, 246, 0.4); }
+  50% { border-color: rgba(59, 130, 246, 0.8); }
+  100% { border-color: rgba(59, 130, 246, 0.4); }
+}

@@ -32,7 +32,28 @@ const Sidebar: React.FC<SidebarProps> = ({ activeMenu, setActiveMenu, isOpen, cu
   useEffect(() => {
     const fetchApps = async () => {
       const apps = await db.getApps();
-      setActiveApps(apps.filter(app => app.status === 'Active'));
+      const active = apps.filter(app => app.status === 'Active');
+
+      // Load saved order from localStorage
+      const savedOrder = localStorage.getItem('ricp_app_order');
+      if (savedOrder) {
+        try {
+          const orderArr = JSON.parse(savedOrder);
+          if (Array.isArray(orderArr)) {
+            active.sort((a, b) => {
+              const indexA = orderArr.indexOf(a.app_id);
+              const indexB = orderArr.indexOf(b.app_id);
+              if (indexA === -1 && indexB === -1) return 0;
+              if (indexA === -1) return 1;
+              if (indexB === -1) return -1;
+              return indexA - indexB;
+            });
+          }
+        } catch (e) {
+          console.error("Failed to parse app order", e);
+        }
+      }
+      setActiveApps(active);
     };
     fetchApps();
   }, [activeMenu]); // Re-fetch when menu changes (like coming back from App Registry)

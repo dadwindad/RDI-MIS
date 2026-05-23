@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Blocks, Calculator, FileCheck, Landmark, AppWindow, BarChart3 } from 'lucide-react';
+import { Blocks, Calculator, FileCheck, Landmark, AppWindow, BarChart3, Move, Check, ArrowLeft, ArrowRight, GripVertical } from 'lucide-react';
 import ProjectDashboard from '../../sub-apps/pms-app/src/components/ProjectDashboard';
 import CalendarView from '../../sub-apps/calendar-app/src/components/CalendarView';
 import QAMetrics from '../../sub-apps/qa-app/src/components/QAMetrics';
@@ -12,14 +12,74 @@ interface OrganizationProps {
 
 const Organization: React.FC<OrganizationProps> = ({ activeApp, setActiveMenu }) => {
   const [apps, setApps] = useState<IAppRegistry[]>([]);
+  const [draggedAppId, setDraggedAppId] = useState<string | null>(null);
+  const draggedRef = React.useRef(false);
 
   useEffect(() => {
     const fetchApps = async () => {
       const data = await db.getApps();
-      setApps(data.filter(app => app.status === 'Active'));
+      const activeApps = data.filter(app => app.status === 'Active');
+
+      // Load saved order from localStorage
+      const savedOrder = localStorage.getItem('ricp_app_order');
+      if (savedOrder) {
+        try {
+          const orderArr = JSON.parse(savedOrder);
+          if (Array.isArray(orderArr)) {
+            activeApps.sort((a, b) => {
+              const indexA = orderArr.indexOf(a.app_id);
+              const indexB = orderArr.indexOf(b.app_id);
+              if (indexA === -1 && indexB === -1) return 0;
+              if (indexA === -1) return 1;
+              if (indexB === -1) return -1;
+              return indexA - indexB;
+            });
+          }
+        } catch (e) {
+          console.error("Failed to parse app order", e);
+        }
+      }
+      setApps(activeApps);
     };
     fetchApps();
   }, []);
+
+  const handleDragStart = (e: React.DragEvent, appId: string) => {
+    draggedRef.current = true;
+    setDraggedAppId(appId);
+    e.dataTransfer.effectAllowed = 'move';
+    e.dataTransfer.setData('text/plain', appId);
+  };
+
+  const handleDragOver = (e: React.DragEvent, targetAppId: string) => {
+    e.preventDefault();
+    if (!draggedAppId || draggedAppId === targetAppId) return;
+
+    const draggedIdx = apps.findIndex(app => app.app_id === draggedAppId);
+    const targetIdx = apps.findIndex(app => app.app_id === targetAppId);
+
+    if (draggedIdx !== -1 && targetIdx !== -1) {
+      const updatedApps = [...apps];
+      const [draggedApp] = updatedApps.splice(draggedIdx, 1);
+      updatedApps.splice(targetIdx, 0, draggedApp);
+      setApps(updatedApps);
+
+      const newOrder = updatedApps.map(a => a.app_id);
+      localStorage.setItem('ricp_app_order', JSON.stringify(newOrder));
+    }
+  };
+
+  const handleDragEnd = () => {
+    setDraggedAppId(null);
+    setTimeout(() => {
+      draggedRef.current = false;
+    }, 50);
+  };
+
+  const handleCardClick = (appId: string) => {
+    if (draggedRef.current) return;
+    setActiveMenu(appId);
+  };
 
   const getAppIcon = (id: string) => {
     if (id.includes('pms')) return <Blocks size={40} />;
@@ -103,21 +163,31 @@ const Organization: React.FC<OrganizationProps> = ({ activeApp, setActiveMenu })
     <div>
       <div className="page-header" style={{ marginBottom: '1.5rem' }}>
         <h1 className="page-title">Organization Apps</h1>
-        <p className="page-subtitle">Select a sub-application to launch your workspace. Access is granted based on your role.</p>
+        <p className="page-subtitle">Select a sub-application to launch your workspace. Drag the cards to reorder them as desired.</p>
       </div>
 
       <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(250px, 1fr))', gap: '1.5rem' }}>
-        {apps.map(app => (
+        {apps.map((app, idx) => (
           <div 
             key={app.app_id} 
-            onClick={() => setActiveMenu(app.app_id)}
+            draggable={true}
+            onDragStart={(e) => handleDragStart(e, app.app_id)}
+            onDragOver={(e) => handleDragOver(e, app.app_id)}
+            onDragEnd={handleDragEnd}
+            onClick={() => handleCardClick(app.app_id)}
+            className={`app-card-draggable ${draggedAppId === app.app_id ? 'dragging' : ''}`}
             style={{ 
               backgroundColor: 'var(--bg-secondary)', padding: '2rem', borderRadius: '1rem', border: '1px solid var(--border-color)', 
-              display: 'flex', flexDirection: 'column', alignItems: 'center', textAlign: 'center', cursor: 'pointer',
-              transition: 'transform 0.2s, boxShadow 0.2s',
-              boxShadow: '0 4px 6px -1px rgba(0,0,0,0.05)'
+              display: 'flex', flexDirection: 'column', alignItems: 'center', textAlign: 'center', cursor: 'grab',
+              transition: 'transform 0.2s, box-shadow 0.2s, opacity 0.2s',
+              boxShadow: '0 4px 6px -1px rgba(0,0,0,0.05)',
+              opacity: draggedAppId === app.app_id ? 0.4 : 1,
+              position: 'relative'
             }}
           >
+            <div style={{ position: 'absolute', top: '0.75rem', right: '0.75rem', color: 'var(--text-secondary)', opacity: 0.35 }}>
+              <GripVertical size={18} />
+            </div>
             <div style={{ color: getAppColor(app.app_id), marginBottom: '1rem' }}>
               {getAppIcon(app.app_id)}
             </div>

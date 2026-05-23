@@ -26,6 +26,10 @@ export default defineConfig({
       '/rdi_mis/api': {
         target: 'http://localhost:3801',
         rewrite: (path) => path.replace(/^\/rdi_mis/, '')
+      },
+      '/rdi_mis/storage': {
+        target: 'http://localhost:3801',
+        rewrite: (path) => path.replace(/^\/rdi_mis/, '')
       }
     }
   }
