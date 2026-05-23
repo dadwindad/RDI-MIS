@@ -25,7 +25,7 @@ const CalendarView = () => {
   const [currentDate, setCurrentDate] = useState(new Date('2026-05-01T00:00:00'));
   const [selectedEvent, setSelectedEvent] = useState(null);
   const [isAddingEvent, setIsAddingEvent] = useState(false);
-  const [newEvent, setNewEvent] = useState({ id: null, title: '', type: 'ประชุมภายใน', start_date: '', end_date: '', deadline: '', location: '', participants: [] });
+  const [newEvent, setNewEvent] = useState({ id: null, title: '', type: 'ประชุมภายใน', start_date: '', end_date: '', deadline: '', location: '', participants: [], storage_path: '', visibility: 'INTERNAL' });
   const [fileToUpload, setFileToUpload] = useState(null);
   const [availableUsers, setAvailableUsers] = useState([]);
   const [activityTypes, setActivityTypes] = useState([]);
@@ -204,7 +204,7 @@ const CalendarView = () => {
     const tzoffset = (new Date()).getTimezoneOffset() * 60000;
     const localISOTime = (new Date(date - tzoffset)).toISOString().slice(0, -1);
     const dateStr = localISOTime.split('T')[0];
-    setNewEvent({ id: null, title: '', type: 'ประชุมภายใน', start_date: dateStr, end_date: '', deadline: '', location: '', participants: [] });
+    setNewEvent({ id: null, title: '', type: 'ประชุมภายใน', start_date: dateStr, end_date: '', deadline: '', location: '', participants: [], storage_path: '', visibility: 'INTERNAL' });
     setFileToUpload(null);
     setIsAddingEvent(true);
   };
@@ -218,7 +218,9 @@ const CalendarView = () => {
       end_date: event.end_date ? event.end_date.split('T')[0] : '',
       deadline: event.deadline ? event.deadline.split('T')[0] : '',
       location: event.location || '',
-      participants: event.participants || []
+      participants: event.participants || [],
+      storage_path: event.storage_path || '',
+      visibility: event.visibility || 'INTERNAL'
     });
     setFileToUpload(null);
     setSelectedEvent(null);
@@ -315,7 +317,7 @@ const CalendarView = () => {
       }
 
       setIsAddingEvent(false);
-      setNewEvent({ id: null, title: '', type: 'ประชุมภายใน', start_date: '', end_date: '', deadline: '', location: '', participants: [] });
+      setNewEvent({ id: null, title: '', type: 'ประชุมภายใน', start_date: '', end_date: '', deadline: '', location: '', participants: [], storage_path: '', visibility: 'INTERNAL' });
       setFileToUpload(null);
       fetchEvents();
     } catch (error) {

@@ -120,7 +120,7 @@ app.get('/api/calendar/events', requireAuth, (req, res) => {
 
   // Query Activities
   const activityQuery = `
-    SELECT id, title, type, start_date, end_date, deadline, location, 'activity' as event_type, storage_path 
+    SELECT id, title, type, start_date, end_date, deadline, location, 'activity' as event_type, storage_path, visibility 
     FROM staff_activities 
     WHERE is_deleted = 0 
       AND ((start_date >= ? AND start_date <= ?) OR (end_date >= ? AND end_date <= ?) OR (deadline >= ? AND deadline <= ?))
@@ -169,7 +169,7 @@ app.get('/api/public/events', (req, res) => {
   }
 
   const activityQuery = `
-    SELECT id, title, type, start_date, end_date, deadline, location, 'activity' as event_type, storage_path 
+    SELECT id, title, type, start_date, end_date, deadline, location, 'activity' as event_type, storage_path, visibility 
     FROM staff_activities 
     WHERE is_deleted = 0 
       AND ((start_date >= ? AND start_date <= ?) OR (end_date >= ? AND end_date <= ?))
