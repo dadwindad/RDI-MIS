@@ -43,7 +43,18 @@ const storage = multer.diskStorage({
     const appSource = req.body.appSource || 'Core System';
     const activity = req.body.activity || 'General';
     const uploader = req.body.uploader || 'Unknown';
-    cb(null, `[${appSource}]_[${activity}]_[${uploader}]_${uniqueSuffix}-${file.originalname}`);
+
+    // Decode original name from Latin1 to UTF-8 to support Thai characters
+    const decodedOriginalname = Buffer.from(file.originalname, 'latin1').toString('utf8');
+
+    // Sanitize values to prevent invalid characters in Windows filenames (\ / : * ? " < > |)
+    const sanitize = (str) => str.replace(/[^\w\sก-๙.-]/g, '_');
+    const safeAppSource = sanitize(appSource);
+    const safeActivity = sanitize(activity);
+    const safeUploader = sanitize(uploader);
+    const safeOriginalname = sanitize(decodedOriginalname);
+
+    cb(null, `[${safeAppSource}]_[${safeActivity}]_[${safeUploader}]_${uniqueSuffix}-${safeOriginalname}`);
   }
 });
 const upload = multer({ storage });

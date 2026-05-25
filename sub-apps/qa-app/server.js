@@ -12,7 +12,13 @@ if (!fs.existsSync(uploadDir)) fs.mkdirSync(uploadDir, { recursive: true });
 
 const storage = multer.diskStorage({
   destination: (req, file, cb) => cb(null, uploadDir),
-  filename: (req, file, cb) => cb(null, Date.now() + '-' + file.originalname)
+  filename: (req, file, cb) => {
+    // Decode original name from Latin1 to UTF-8 to support Thai characters
+    const decodedOriginalname = Buffer.from(file.originalname, 'latin1').toString('utf8');
+    // Sanitize values to prevent invalid characters in Windows filenames (\ / : * ? " < > |)
+    const safeOriginalname = decodedOriginalname.replace(/[^\w\sก-๙.-]/g, '_');
+    cb(null, Date.now() + '-' + safeOriginalname);
+  }
 });
 const upload = multer({ storage });
 
