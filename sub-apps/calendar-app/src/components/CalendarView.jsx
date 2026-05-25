@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Calendar as CalendarIcon, Clock, MapPin, FileText, Filter, Plus, ChevronLeft, ChevronRight, X, Users, AlertCircle, ChevronDown, Settings, Edit2, LayoutDashboard } from 'lucide-react';
+import { Calendar as CalendarIcon, Clock, MapPin, FileText, Filter, Plus, ChevronLeft, ChevronRight, X, Users, AlertCircle, ChevronDown, Settings, Edit2, LayoutDashboard, Loader2 } from 'lucide-react';
 import './Calendar.css';
 import KanbanBoard from './KanbanBoard';
 
@@ -27,6 +27,8 @@ const CalendarView = () => {
   const [isAddingEvent, setIsAddingEvent] = useState(false);
   const [newEvent, setNewEvent] = useState({ id: null, title: '', type: 'ประชุมภายใน', start_date: '', end_date: '', deadline: '', location: '', participants: [], storage_path: '', visibility: 'INTERNAL' });
   const [fileToUpload, setFileToUpload] = useState(null);
+  const [submitting, setSubmitting] = useState(false);
+  const [uploadProgress, setUploadProgress] = useState(0);
   const [availableUsers, setAvailableUsers] = useState([]);
   const [activityTypes, setActivityTypes] = useState([]);
   const [isManagingTypes, setIsManagingTypes] = useState(false);
@@ -230,6 +232,8 @@ const CalendarView = () => {
   const submitNewEvent = async (e) => {
     e.preventDefault();
 
+    setSubmitting(true);
+    setUploadProgress(0);
 
     try {
       // Get current user from localStorage for token
@@ -266,23 +270,38 @@ const CalendarView = () => {
           }
         }
         formData.append('uploader', uploaderName);
-
         formData.append('file', fileToUpload);
 
-        const uploadRes = await fetch('/rdi_mis/api/storage/upload', {
-          method: 'POST',
-          headers: {
-            'Authorization': token,
-            'x-user-name': encodeURIComponent(uploaderName)
-          },
-          body: formData
+        // Upload using XMLHttpRequest to get progress updates
+        const uploadData = await new Promise((resolve, reject) => {
+          const xhr = new XMLHttpRequest();
+          xhr.open('POST', '/rdi_mis/api/storage/upload');
+          xhr.setRequestHeader('Authorization', token);
+          xhr.setRequestHeader('x-user-name', encodeURIComponent(uploaderName));
+
+          xhr.upload.onprogress = (progressEvent) => {
+            if (progressEvent.lengthComputable) {
+              const percentComplete = Math.round((progressEvent.loaded / progressEvent.total) * 100);
+              setUploadProgress(percentComplete);
+            }
+          };
+
+          xhr.onload = () => {
+            if (xhr.status >= 200 && xhr.status < 300) {
+              try {
+                resolve(JSON.parse(xhr.responseText));
+              } catch (err) {
+                reject(new Error('Invalid response from upload server'));
+              }
+            } else {
+              reject(new Error(`Upload failed with status ${xhr.status}`));
+            }
+          };
+
+          xhr.onerror = () => reject(new Error('Upload network error'));
+          xhr.send(formData);
         });
 
-        if (!uploadRes.ok) {
-          throw new Error('Upload failed');
-        }
-
-        const uploadData = await uploadRes.json();
         storage_path = `/rdi_mis${uploadData.path}`;
       }
 
@@ -323,6 +342,8 @@ const CalendarView = () => {
     } catch (error) {
       console.error('Error creating event:', error);
       showAlert('เกิดข้อผิดพลาดในการบันทึกกิจกรรม', 'error');
+    } finally {
+      setSubmitting(false);
     }
   };
 
@@ -891,12 +912,31 @@ const CalendarView = () => {
                     <input type="text" value={newEvent.location} onChange={e => setNewEvent({ ...newEvent, location: e.target.value })} placeholder="ระบุสถานที่" />
                   </div>
 
+                  {submitting && (
+                    <div style={{ padding: '0 1.5rem 1rem 1.5rem', width: '100%', boxSizing: 'border-box' }}>
+                      <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '0.5rem', fontSize: '0.875rem', fontWeight: 600 }}>
+                        <span>{fileToUpload ? 'กำลังอัปโหลดไฟล์...' : 'กำลังบันทึกกิจกรรม...'}</span>
+                        {fileToUpload ? <span>{uploadProgress}%</span> : null}
+                      </div>
+                      <div style={{ width: '100%', height: '8px', backgroundColor: 'var(--border-color, #e2e8f0)', borderRadius: '4px', overflow: 'hidden' }}>
+                        <div style={{ width: `${fileToUpload ? uploadProgress : 100}%`, height: '100%', backgroundColor: 'var(--accent-color, #2563eb)', borderRadius: '4px', transition: 'width 0.2s ease-out' }} />
+                      </div>
+                    </div>
+                  )}
+
                   <div className="calendar-modal-footer">
-                    <button type="button" onClick={() => setIsAddingEvent(false)} className="btn-secondary">
+                    <button type="button" onClick={() => setIsAddingEvent(false)} disabled={submitting} className="btn-secondary">
                       ยกเลิก
                     </button>
-                    <button type="submit" className="calendar-btn-primary">
-                      บันทึกกิจกรรม
+                    <button type="submit" disabled={submitting} className="calendar-btn-primary" style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                      {submitting ? (
+                        <>
+                          <Loader2 size={16} className="animate-spin" />
+                          <span>กำลังบันทึก...</span>
+                        </>
+                      ) : (
+                        'บันทึกกิจกรรม'
+                      )}
                     </button>
                   </div>
                 </form>
