@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Calendar as CalendarIcon, Clock, MapPin, FileText, Filter, Plus, ChevronLeft, ChevronRight, X, Users, AlertCircle, ChevronDown, Settings, Edit2, LayoutDashboard, Loader2 } from 'lucide-react';
+import { Calendar as CalendarIcon, Clock, MapPin, FileText, Filter, Plus, ChevronLeft, ChevronRight, X, Users, AlertCircle, ChevronDown, Settings, Edit2, LayoutDashboard, Loader2, Download, Search } from 'lucide-react';
 import './Calendar.css';
 import KanbanBoard from './KanbanBoard';
 
@@ -29,6 +29,18 @@ const CalendarView = () => {
   const [fileToUpload, setFileToUpload] = useState(null);
   const [submitting, setSubmitting] = useState(false);
   const [uploadProgress, setUploadProgress] = useState(0);
+  const [searchTerm, setSearchTerm] = useState('');
+  const [typeFilter, setTypeFilter] = useState('all');
+  const [visibilityFilter, setVisibilityFilter] = useState('all');
+  const [startDateFilter, setStartDateFilter] = useState('');
+  const [endDateFilter, setEndDateFilter] = useState('');
+  const [currentPage, setCurrentPage] = useState(1);
+  const [itemsPerPage, setItemsPerPage] = useState(10);
+
+  useEffect(() => {
+    setCurrentPage(1);
+  }, [searchTerm, typeFilter, visibilityFilter, startDateFilter, endDateFilter]);
+
   const [availableUsers, setAvailableUsers] = useState([]);
   const [activityTypes, setActivityTypes] = useState([]);
   const [isManagingTypes, setIsManagingTypes] = useState(false);
@@ -393,6 +405,79 @@ const CalendarView = () => {
     });
   };
 
+  const getFilteredEventsForTable = () => {
+    const safeEvents = Array.isArray(events) ? events : [];
+    return safeEvents.filter(event => {
+      // 1. Search text
+      const matchesSearch =
+        !searchTerm ||
+        event.title.toLowerCase().includes(searchTerm.toLowerCase()) ||
+        (event.location && event.location.toLowerCase().includes(searchTerm.toLowerCase())) ||
+        (event.created_by && event.created_by.toLowerCase().includes(searchTerm.toLowerCase()));
+
+      // 2. Type
+      const matchesType = typeFilter === 'all' || event.type === typeFilter;
+
+      // 3. Visibility
+      const matchesVisibility = visibilityFilter === 'all' || event.visibility === visibilityFilter;
+
+      // 4. Date Range
+      let matchesDate = true;
+      if (event.start_date) {
+        const evDate = new Date(event.start_date.split('T')[0]);
+        if (startDateFilter) {
+          const sDate = new Date(startDateFilter);
+          if (evDate < sDate) matchesDate = false;
+        }
+        if (endDateFilter) {
+          const eDate = new Date(endDateFilter);
+          if (evDate > eDate) matchesDate = false;
+        }
+      } else if (startDateFilter || endDateFilter) {
+        matchesDate = false;
+      }
+
+      return matchesSearch && matchesType && matchesVisibility && matchesDate;
+    });
+  };
+
+  const exportToCSV = () => {
+    const tableEvents = getFilteredEventsForTable();
+    // Column headers
+    const headers = ['รหัสกิจกรรม', 'หัวข้อ', 'ประเภท', 'วันที่เริ่ม', 'วันที่สิ้นสุด', 'กำหนดส่ง', 'สถานที่', 'การเข้าถึง', 'ผู้เข้าร่วม', 'ไฟล์แนบ'];
+
+    // Rows
+    const rows = tableEvents.map(event => [
+      event.id,
+      event.title,
+      event.type,
+      event.start_date || '',
+      event.end_date || '',
+      event.deadline || '',
+      event.location || '',
+      event.visibility === 'PRIVATE' ? 'ส่วนตัว' : 'ภายในองค์กร',
+      event.participants && Array.isArray(event.participants) ? event.participants.map(p => p.display_name).join(', ') : '',
+      event.storage_path ? window.location.origin + getStorageUrl(event.storage_path) : 'ไม่มี'
+    ]);
+
+    // Combine headers and rows
+    const csvContent = [
+      headers.join(','),
+      ...rows.map(row => row.map(val => `"${String(val).replace(/"/g, '""')}"`).join(','))
+    ].join('\r\n');
+
+    // Add UTF-8 BOM for Excel Thai character support
+    const blob = new Blob([new Uint8Array([0xEF, 0xBB, 0xBF]), csvContent], { type: 'text/csv;charset=utf-8;' });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement('a');
+    link.setAttribute('href', url);
+    link.setAttribute('download', `กิจกรรม_${new Date().toISOString().slice(0, 10)}.csv`);
+    link.style.visibility = 'hidden';
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+  };
+
   const safeEvents = Array.isArray(events) ? events : [];
   const filteredEvents = safeEvents.filter(event => {
     // 1. Filter by Type
@@ -499,16 +584,16 @@ const CalendarView = () => {
       <div className="calendar-header" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-end', marginBottom: '1.5rem', paddingBottom: '0' }}>
         <div style={{ paddingBottom: '1rem' }}>
           <h1 className="calendar-title">
-            {viewMode === 'kanban' ? 'Workflow Board' : 'Smart Office & Calendar'}
+            {viewMode === 'kanban' ? 'Workflow Board' : viewMode === 'table' ? 'รายงานกิจกรรม' : 'Smart Office & Calendar'}
           </h1>
           <p className="calendar-subtitle">
-            {viewMode === 'kanban' ? 'ระบบจัดการสถานะหนังสือสารบรรณ (e-Document)' : 'จัดการกำหนดการและเอกสารธุรการ (Unified Calendar View)'}
+            {viewMode === 'kanban' ? 'ระบบจัดการสถานะหนังสือสารบรรณ (e-Document)' : viewMode === 'table' ? 'ตารางสรุปกิจกรรมและส่งออกเอกสารรายงาน (Activity Table View)' : 'จัดการกำหนดการและเอกสารธุรการ (Unified Calendar View)'}
           </p>
         </div>
         <div style={{ display: 'flex', gap: '0.5rem', backgroundColor: 'var(--bg-tertiary)', padding: '0.25rem', borderRadius: '0.5rem' }}>
-          <button 
+          <button
             onClick={() => setViewMode('calendar')}
-            style={{ 
+            style={{
               display: 'flex', alignItems: 'center', gap: '0.5rem', padding: '0.5rem 1rem', border: 'none', borderRadius: '0.375rem', cursor: 'pointer',
               backgroundColor: viewMode === 'calendar' ? 'var(--bg-secondary)' : 'transparent',
               boxShadow: viewMode === 'calendar' ? '0 1px 3px rgba(0,0,0,0.1)' : 'none',
@@ -518,9 +603,21 @@ const CalendarView = () => {
           >
             <CalendarIcon size={18} /> ปฏิทิน
           </button>
-          <button 
+          <button
+            onClick={() => setViewMode('table')}
+            style={{
+              display: 'flex', alignItems: 'center', gap: '0.5rem', padding: '0.5rem 1rem', border: 'none', borderRadius: '0.375rem', cursor: 'pointer',
+              backgroundColor: viewMode === 'table' ? 'var(--bg-secondary)' : 'transparent',
+              boxShadow: viewMode === 'table' ? '0 1px 3px rgba(0,0,0,0.1)' : 'none',
+              fontWeight: viewMode === 'table' ? 600 : 400,
+              color: viewMode === 'table' ? 'var(--text-primary)' : 'var(--text-secondary)'
+            }}
+          >
+            <FileText size={18} /> ตารางข้อมูล
+          </button>
+          <button
             onClick={() => setViewMode('kanban')}
-            style={{ 
+            style={{
               display: 'flex', alignItems: 'center', gap: '0.5rem', padding: '0.5rem 1rem', border: 'none', borderRadius: '0.375rem', cursor: 'pointer',
               backgroundColor: viewMode === 'kanban' ? 'var(--bg-secondary)' : 'transparent',
               boxShadow: viewMode === 'kanban' ? '0 1px 3px rgba(0,0,0,0.1)' : 'none',
@@ -530,12 +627,364 @@ const CalendarView = () => {
           >
             <LayoutDashboard size={18} /> ระบบติดตาม
           </button>
+
         </div>
       </div>
 
       {viewMode === 'kanban' ? (
         <KanbanBoard currentUser={currentUser} />
-      ) : (
+      ) : viewMode === 'table' ? (() => {
+        const filteredEventsForTable = getFilteredEventsForTable();
+        const totalItems = filteredEventsForTable.length;
+        const totalPages = Math.ceil(totalItems / itemsPerPage);
+        const indexOfLastItem = currentPage * itemsPerPage;
+        const indexOfFirstItem = indexOfLastItem - itemsPerPage;
+        const currentItems = filteredEventsForTable.slice(indexOfFirstItem, indexOfLastItem);
+        return (
+          <div className="calendar-table-view" style={{ backgroundColor: 'var(--bg-secondary)', borderRadius: '1rem', padding: '1.5rem', boxShadow: '0 4px 6px -1px rgba(0,0,0,0.05), 0 2px 4px -1px rgba(0,0,0,0.02)', border: '1px solid var(--border-color)' }}>
+            {/* Filters Control Panel */}
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem', marginBottom: '1.5rem' }}>
+              <div style={{ display: 'flex', gap: '1rem', flexWrap: 'wrap', alignItems: 'center', justifyContent: 'space-between' }}>
+                <div style={{ display: 'flex', gap: '0.5rem', alignItems: 'center', position: 'relative', flex: '1', minWidth: '250px' }}>
+                  <Search size={18} style={{ position: 'absolute', left: '0.75rem', color: 'var(--text-secondary)' }} />
+                  <input
+                    type="text"
+                    placeholder="ค้นหาหัวข้อ, สถานที่, ผู้สร้าง..."
+                    value={searchTerm}
+                    onChange={e => setSearchTerm(e.target.value)}
+                    style={{
+                      width: '100%',
+                      padding: '0.5rem 0.75rem 0.5rem 2.5rem',
+                      borderRadius: '0.5rem',
+                      border: '1px solid var(--border-color)',
+                      backgroundColor: 'var(--bg-primary)',
+                      color: 'var(--text-primary)',
+                      fontFamily: 'inherit'
+                    }}
+                  />
+                </div>
+
+                <button
+                  onClick={exportToCSV}
+                  className="calendar-btn-primary"
+                  style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', padding: '0.5rem 1rem' }}
+                >
+                  <Download size={18} /> ส่งออกเป็น Excel (CSV)
+                </button>
+              </div>
+
+              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: '1rem' }}>
+                {/* Type Filter */}
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '0.25rem' }}>
+                  <label style={{ fontSize: '0.75rem', fontWeight: 600, color: 'var(--text-secondary)' }}>ประเภทกิจกรรม</label>
+                  <select
+                    value={typeFilter}
+                    onChange={e => setTypeFilter(e.target.value)}
+                    style={{
+                      padding: '0.5rem',
+                      borderRadius: '0.5rem',
+                      border: '1px solid var(--border-color)',
+                      backgroundColor: 'var(--bg-primary)',
+                      color: 'var(--text-primary)',
+                      fontFamily: 'inherit'
+                    }}
+                  >
+                    <option value="all">ทั้งหมด</option>
+                    {activityTypes.map(t => (
+                      <option key={t.name} value={t.name}>{t.name}</option>
+                    ))}
+                  </select>
+                </div>
+
+                {/* Visibility Filter */}
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '0.25rem' }}>
+                  <label style={{ fontSize: '0.75rem', fontWeight: 600, color: 'var(--text-secondary)' }}>การเข้าถึง</label>
+                  <select
+                    value={visibilityFilter}
+                    onChange={e => setVisibilityFilter(e.target.value)}
+                    style={{
+                      padding: '0.5rem',
+                      borderRadius: '0.5rem',
+                      border: '1px solid var(--border-color)',
+                      backgroundColor: 'var(--bg-primary)',
+                      color: 'var(--text-primary)',
+                      fontFamily: 'inherit'
+                    }}
+                  >
+                    <option value="all">ทั้งหมด</option>
+                    <option value="INTERNAL">ภายในองค์กร</option>
+                    <option value="PRIVATE">ส่วนตัว</option>
+                  </select>
+                </div>
+
+                {/* Start Date */}
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '0.25rem' }}>
+                  <label style={{ fontSize: '0.75rem', fontWeight: 600, color: 'var(--text-secondary)' }}>ตั้งแต่วันที่</label>
+                  <input
+                    type="date"
+                    value={startDateFilter}
+                    onChange={e => setStartDateFilter(e.target.value)}
+                    style={{
+                      padding: '0.45rem',
+                      borderRadius: '0.5rem',
+                      border: '1px solid var(--border-color)',
+                      backgroundColor: 'var(--bg-primary)',
+                      color: 'var(--text-primary)',
+                      fontFamily: 'inherit'
+                    }}
+                  />
+                </div>
+
+                {/* End Date */}
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '0.25rem' }}>
+                  <label style={{ fontSize: '0.75rem', fontWeight: 600, color: 'var(--text-secondary)' }}>ถึงวันที่</label>
+                  <input
+                    type="date"
+                    value={endDateFilter}
+                    onChange={e => setEndDateFilter(e.target.value)}
+                    style={{
+                      padding: '0.45rem',
+                      borderRadius: '0.5rem',
+                      border: '1px solid var(--border-color)',
+                      backgroundColor: 'var(--bg-primary)',
+                      color: 'var(--text-primary)',
+                      fontFamily: 'inherit'
+                    }}
+                  />
+                </div>
+              </div>
+            </div>
+
+            {/* Table Container */}
+            <div style={{ overflowX: 'auto' }}>
+              <table style={{ width: '100%', borderCollapse: 'collapse', textAlign: 'left', minWidth: '800px' }}>
+                <thead>
+                  <tr style={{ borderBottom: '2px solid var(--border-color)', color: 'var(--text-secondary)', fontSize: '0.875rem' }}>
+                    <th style={{ padding: '0.75rem 1rem', fontWeight: 600 }}>วันที่</th>
+                    <th style={{ padding: '0.75rem 1rem', fontWeight: 600 }}>หัวข้อกิจกรรม</th>
+                    <th style={{ padding: '0.75rem 1rem', fontWeight: 600 }}>ประเภท</th>
+                    <th style={{ padding: '0.75rem 1rem', fontWeight: 600 }}>สถานที่</th>
+                    <th style={{ padding: '0.75rem 1rem', fontWeight: 600 }}>ผู้เข้าร่วม</th>
+                    <th style={{ padding: '0.75rem 1rem', fontWeight: 600 }}>ไฟล์แนบ</th>
+                    <th style={{ padding: '0.75rem 1rem', fontWeight: 600, textAlign: 'center' }}>จัดการ</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {currentItems.length === 0 ? (
+                    <tr>
+                      <td colSpan="7" style={{ padding: '3rem 1rem', textAlign: 'center', color: 'var(--text-secondary)', fontSize: '0.95rem' }}>
+                        <AlertCircle size={32} style={{ display: 'block', margin: '0 auto 0.75rem auto', color: 'var(--text-secondary)' }} />
+                        ไม่พบข้อมูลกิจกรรมที่ตรงตามเงื่อนไขการกรอง
+                      </td>
+                    </tr>
+                  ) : (
+                    currentItems.map((event) => {
+                      const typeColor = activityTypes.find(t => t.name === event.type) || {
+                        color_bg: 'rgba(156, 163, 175, 0.1)',
+                        color_text: '#4b5563',
+                        color_border: '#9ca3af'
+                      };
+                      return (
+                        <tr key={event.id} style={{ borderBottom: '1px solid var(--border-color)', fontSize: '0.9rem', transition: 'background-color 0.2s' }} className="table-row-hover">
+                          <td style={{ padding: '1rem', whiteSpace: 'nowrap' }}>
+                            <div style={{ fontWeight: 500 }}>{event.start_date ? new Date(event.start_date).toLocaleDateString('th-TH', { day: 'numeric', month: 'short', year: '2-digit' }) : '-'}</div>
+                            {event.end_date && event.end_date !== event.start_date && (
+                              <div style={{ fontSize: '0.75rem', color: 'var(--text-secondary)' }}>
+                                ถึง {new Date(event.end_date).toLocaleDateString('th-TH', { day: 'numeric', month: 'short', year: '2-digit' })}
+                              </div>
+                            )}
+                          </td>
+                          <td style={{ padding: '1rem', maxWidth: '300px', wordBreak: 'break-word' }}>
+                            <div style={{ fontWeight: 600, color: 'var(--text-primary)' }}>{event.title}</div>
+                            {event.visibility === 'PRIVATE' && (
+                              <span style={{ fontSize: '0.7rem', backgroundColor: 'rgba(239, 68, 68, 0.1)', color: '#ef4444', padding: '0.1rem 0.35rem', borderRadius: '0.25rem', marginLeft: '0.5rem', verticalAlign: 'middle', fontWeight: 600 }}>PRIVATE</span>
+                            )}
+                          </td>
+                          <td style={{ padding: '1rem' }}>
+                            <span style={{
+                              backgroundColor: typeColor.color_bg,
+                              color: typeColor.color_text,
+                              border: `1px solid ${typeColor.color_border}`,
+                              padding: '0.25rem 0.5rem',
+                              borderRadius: '0.25rem',
+                              fontSize: '0.75rem',
+                              fontWeight: 600,
+                              whiteSpace: 'nowrap'
+                            }}>
+                              {event.type}
+                            </span>
+                          </td>
+                          <td style={{ padding: '1rem', color: 'var(--text-secondary)' }}>{event.location || '-'}</td>
+                          <td style={{ padding: '1rem', color: 'var(--text-secondary)' }}>
+                            {event.participants && Array.isArray(event.participants) && event.participants.length > 0
+                              ? event.participants.map(p => p.display_name).join(', ')
+                              : '-'}
+                          </td>
+                          <td style={{ padding: '1rem' }}>
+                            {event.storage_path ? (
+                              <button
+                                onClick={() => window.open(getStorageUrl(event.storage_path), '_blank')}
+                                style={{
+                                  display: 'flex',
+                                  alignItems: 'center',
+                                  gap: '0.25rem',
+                                  color: 'var(--accent-color)',
+                                  border: 'none',
+                                  background: 'none',
+                                  cursor: 'pointer',
+                                  padding: '0',
+                                  fontWeight: 500,
+                                  fontSize: '0.85rem'
+                                }}
+                              >
+                                <FileText size={16} /> เปิดดูไฟล์
+                              </button>
+                            ) : (
+                              <span style={{ color: 'var(--text-secondary)', fontSize: '0.8rem' }}>ไม่มี</span>
+                            )}
+                          </td>
+                          <td style={{ padding: '1rem', textAlign: 'center' }}>
+                            <div style={{ display: 'flex', gap: '0.5rem', justifyContent: 'center' }}>
+                              <button
+                                onClick={() => openEditEvent(event)}
+                                style={{
+                                  display: 'flex',
+                                  alignItems: 'center',
+                                  gap: '0.25rem',
+                                  padding: '0.25rem 0.5rem',
+                                  borderRadius: '0.375rem',
+                                  border: '1px solid var(--border-color)',
+                                  backgroundColor: 'var(--bg-primary)',
+                                  color: 'var(--text-primary)',
+                                  cursor: 'pointer',
+                                  fontSize: '0.8rem'
+                                }}
+                              >
+                                <Edit2 size={14} /> แก้ไข
+                              </button>
+                              <button
+                                onClick={() => handleDeleteEvent(event.id)}
+                                style={{
+                                  display: 'flex',
+                                  alignItems: 'center',
+                                  gap: '0.25rem',
+                                  padding: '0.25rem 0.5rem',
+                                  borderRadius: '0.375rem',
+                                  border: '1px solid #fee2e2',
+                                  backgroundColor: 'rgba(239, 68, 68, 0.05)',
+                                  color: '#ef4444',
+                                  cursor: 'pointer',
+                                  fontSize: '0.8rem'
+                                }}
+                              >
+                                ลบ
+                              </button>
+                            </div>
+                          </td>
+                        </tr>
+                      );
+                    })
+                  )}
+                </tbody>
+              </table>
+            </div>
+
+            {/* Pagination Controls */}
+            {totalItems > 0 && (
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginTop: '1.5rem', flexWrap: 'wrap', gap: '1rem', borderTop: '1px solid var(--border-color)', paddingTop: '1rem' }}>
+                <div style={{ fontSize: '0.875rem', color: 'var(--text-secondary)', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                  <span>แสดง</span>
+                  <select
+                    value={itemsPerPage}
+                    onChange={e => {
+                      setItemsPerPage(Number(e.target.value));
+                      setCurrentPage(1);
+                    }}
+                    style={{
+                      padding: '0.25rem 0.5rem',
+                      borderRadius: '0.375rem',
+                      border: '1px solid var(--border-color)',
+                      backgroundColor: 'var(--bg-primary)',
+                      color: 'var(--text-primary)',
+                      fontFamily: 'inherit',
+                      cursor: 'pointer'
+                    }}
+                  >
+                    <option value={5}>5</option>
+                    <option value={10}>10</option>
+                    <option value={20}>20</option>
+                    <option value={50}>50</option>
+                    <option value={100}>100</option>
+                  </select>
+                  <span>รายการต่อหน้า (กำลังแสดง {indexOfFirstItem + 1}-{Math.min(indexOfLastItem, totalItems)} จาก {totalItems} รายการ)</span>
+                </div>
+
+                <div style={{ display: 'flex', gap: '0.25rem', alignItems: 'center' }}>
+                  <button
+                    onClick={() => setCurrentPage(prev => Math.max(prev - 1, 1))}
+                    disabled={currentPage === 1}
+                    className="calendar-btn-secondary"
+                    style={{
+                      padding: '0.35rem 0.75rem',
+                      borderRadius: '0.375rem',
+                      fontSize: '0.875rem',
+                      cursor: currentPage === 1 ? 'not-allowed' : 'pointer',
+                      opacity: currentPage === 1 ? 0.5 : 1
+                    }}
+                  >
+                    ย้อนกลับ
+                  </button>
+
+                  {Array.from({ length: totalPages }, (_, i) => i + 1).map(pageNum => {
+                    if (totalPages > 7) {
+                      if (pageNum !== 1 && pageNum !== totalPages && Math.abs(pageNum - currentPage) > 1) {
+                        if (pageNum === 2 || pageNum === totalPages - 1) {
+                          return <span key={pageNum} style={{ padding: '0 0.25rem', color: 'var(--text-secondary)' }}>...</span>;
+                        }
+                        return null;
+                      }
+                    }
+                    return (
+                      <button
+                        key={pageNum}
+                        onClick={() => setCurrentPage(pageNum)}
+                        style={{
+                          padding: '0.35rem 0.75rem',
+                          borderRadius: '0.375rem',
+                          fontSize: '0.875rem',
+                          border: '1px solid',
+                          borderColor: currentPage === pageNum ? 'var(--accent-color)' : 'var(--border-color)',
+                          backgroundColor: currentPage === pageNum ? 'var(--accent-color)' : 'var(--bg-primary)',
+                          color: currentPage === pageNum ? '#ffffff' : 'var(--text-primary)',
+                          cursor: 'pointer',
+                          fontWeight: currentPage === pageNum ? 600 : 400
+                        }}
+                      >
+                        {pageNum}
+                      </button>
+                    );
+                  })}
+
+                  <button
+                    onClick={() => setCurrentPage(prev => Math.min(prev + 1, totalPages))}
+                    disabled={currentPage === totalPages}
+                    className="calendar-btn-secondary"
+                    style={{
+                      padding: '0.35rem 0.75rem',
+                      borderRadius: '0.375rem',
+                      fontSize: '0.875rem',
+                      cursor: currentPage === totalPages ? 'not-allowed' : 'pointer',
+                      opacity: currentPage === totalPages ? 0.5 : 1
+                    }}
+                  >
+                    ถัดไป
+                  </button>
+                </div>
+              </div>
+            )}
+          </div>
+        );
+      })() : (
         <>
           <div className="calendar-toolbar">
             <div style={{ display: 'flex', gap: '1rem', alignItems: 'center', flexWrap: 'wrap' }}>
@@ -805,9 +1254,11 @@ const CalendarView = () => {
               </div>
             </div>
           )}
+        </>
+      )}
 
-          {/* Add Event Modal */}
-          {isAddingEvent && (
+      {/* Add Event Modal */}
+      {isAddingEvent && (
             <div className="calendar-modal-overlay">
               <div className="calendar-modal">
                 <div className="calendar-modal-header">
@@ -1100,8 +1551,6 @@ const CalendarView = () => {
               </div>
             </div>
           )}
-        </>
-      )}
     </div>
   );
 };

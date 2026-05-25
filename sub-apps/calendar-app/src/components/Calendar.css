@@ -389,3 +389,7 @@
 .animate-spin {
   animation: spin 1s linear infinite;
 }
+
+.table-row-hover:hover {
+  background-color: var(--bg-tertiary);
+}
