@@ -1,0 +1,14 @@
+# Databases (Root and all sub-apps)
+*.db
+*.sqlite
+*.sqlite3
+*.db3
+databases/*.sqlite
+databases/*.sqlite3
+databases/*.db
+databases/*.db3
+sub-apps/*/databases/*.sqlite
+sub-apps/*/databases/*.sqlite3
+sub-apps/*/databases/*.db
+sub-apps/*/databases/*.db3
+**/databases/*
