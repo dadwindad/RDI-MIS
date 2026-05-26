@@ -81,6 +81,21 @@ const StorageGateway: React.FC<StorageGatewayProps> = ({ currentUser }) => {
     }
   };
 
+  const handleDeleteFile = async (filename: string) => {
+    if (!confirm("คุณแน่ใจหรือไม่ว่าต้องการลบไฟล์นี้?")) return;
+    try {
+      const res = await fetch(`/rdi_mis/api/storage/files/${encodeURIComponent(filename)}`, {
+        method: 'DELETE',
+        headers: { 'X-User-Name': currentUser.name }
+      });
+      if (res.ok) {
+        await fetchFiles();
+      }
+    } catch (e) {
+      console.error(e);
+    }
+  };
+
   const formatBytes = (bytes: number) => {
     if (bytes === 0) return '0 Bytes';
     const k = 1024;
@@ -187,6 +202,7 @@ const StorageGateway: React.FC<StorageGatewayProps> = ({ currentUser }) => {
               <th>Uploader</th>
               <th>Size</th>
               <th>Uploaded Date</th>
+              {currentUser.role === 'admin' && <th style={{ textAlign: 'center' }}>Actions</th>}
             </tr>
           </thead>
           <tbody>
@@ -218,11 +234,37 @@ const StorageGateway: React.FC<StorageGatewayProps> = ({ currentUser }) => {
                 <td style={{ color: 'var(--text-secondary)', fontSize: '0.875rem' }}>
                   {new Date(file.createdAt).toLocaleString('th-TH')}
                 </td>
+                {currentUser.role === 'admin' && (
+                  <td style={{ textAlign: 'center' }}>
+                    {!file.isDeleted && (
+                      <button
+                        onClick={() => handleDeleteFile(file.filename)}
+                        style={{
+                          background: 'none',
+                          border: 'none',
+                          color: 'var(--status-danger)',
+                          cursor: 'pointer',
+                          padding: '0.25rem',
+                          display: 'inline-flex',
+                          alignItems: 'center',
+                          justifyContent: 'center',
+                          borderRadius: '0.25rem',
+                          transition: 'background-color 0.2s'
+                        }}
+                        onMouseEnter={(e) => e.currentTarget.style.backgroundColor = 'rgba(239, 68, 68, 0.1)'}
+                        onMouseLeave={(e) => e.currentTarget.style.backgroundColor = 'transparent'}
+                        title="ลบไฟล์"
+                      >
+                        <Trash2 size={16} />
+                      </button>
+                    )}
+                  </td>
+                )}
               </tr>
             ))}
             {currentItems.length === 0 && (
               <tr>
-                <td colSpan={6} style={{ textAlign: 'center', padding: '2rem', color: 'var(--text-secondary)' }}>
+                <td colSpan={currentUser.role === 'admin' ? 7 : 6} style={{ textAlign: 'center', padding: '2rem', color: 'var(--text-secondary)' }}>
                   No files found.
                 </td>
               </tr>
