@@ -19,7 +19,8 @@ const CalendarView = () => {
   const [viewMode, setViewMode] = useState('calendar');
   const [events, setEvents] = useState([]);
   const [loading, setLoading] = useState(true);
-  const [filter, setFilter] = useState('all');
+  const [filter, setFilter] = useState(['all']);
+  const [isTypeFilterOpen, setIsTypeFilterOpen] = useState(false);
   const [participantFilter, setParticipantFilter] = useState([]); // Array of core_user_id
   const [isUserFilterOpen, setIsUserFilterOpen] = useState(false);
   const [currentDate, setCurrentDate] = useState(new Date('2026-05-01T00:00:00'));
@@ -30,7 +31,8 @@ const CalendarView = () => {
   const [submitting, setSubmitting] = useState(false);
   const [uploadProgress, setUploadProgress] = useState(0);
   const [searchTerm, setSearchTerm] = useState('');
-  const [typeFilter, setTypeFilter] = useState('all');
+  const [typeFilter, setTypeFilter] = useState(['all']);
+  const [isTableTypeFilterOpen, setIsTableTypeFilterOpen] = useState(false);
   const [visibilityFilter, setVisibilityFilter] = useState('all');
   const [startDateFilter, setStartDateFilter] = useState('');
   const [endDateFilter, setEndDateFilter] = useState('');
@@ -416,7 +418,10 @@ const CalendarView = () => {
         (event.created_by && event.created_by.toLowerCase().includes(searchTerm.toLowerCase()));
 
       // 2. Type
-      const matchesType = typeFilter === 'all' || event.type === typeFilter;
+      const matchesType = typeFilter.includes('all') || typeFilter.length === 0 || 
+                          typeFilter.includes(event.type) ||
+                          (typeFilter.includes('document') && event.event_type === 'document') ||
+                          (typeFilter.includes('ประชุมภายใน') && (!event.type || event.type === '') && event.event_type === 'activity');
 
       // 3. Visibility
       const matchesVisibility = visibilityFilter === 'all' || event.visibility === visibilityFilter;
@@ -482,12 +487,10 @@ const CalendarView = () => {
   const filteredEvents = safeEvents.filter(event => {
     // 1. Filter by Type
     let matchType = true;
-    if (filter !== 'all') {
-      if (filter === 'document') {
-        matchType = event.event_type === 'document';
-      } else {
-        matchType = event.type === filter || (filter === 'ประชุมภายใน' && (!event.type || event.type === ''));
-      }
+    if (filter.length > 0 && !filter.includes('all')) {
+      matchType = filter.includes(event.type) ||
+                  (filter.includes('document') && event.event_type === 'document') ||
+                  (filter.includes('ประชุมภายใน') && (!event.type || event.type === '') && event.event_type === 'activity');
     }
 
     // 2. Filter by Participants
@@ -675,25 +678,75 @@ const CalendarView = () => {
 
               <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: '1rem' }}>
                 {/* Type Filter */}
-                <div style={{ display: 'flex', flexDirection: 'column', gap: '0.25rem' }}>
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '0.25rem', position: 'relative' }}>
                   <label style={{ fontSize: '0.75rem', fontWeight: 600, color: 'var(--text-secondary)' }}>ประเภทกิจกรรม</label>
-                  <select
-                    value={typeFilter}
-                    onChange={e => setTypeFilter(e.target.value)}
+                  <button
+                    type="button"
+                    onClick={() => setIsTableTypeFilterOpen(!isTableTypeFilterOpen)}
+                    className="calendar-dropdown-btn"
                     style={{
-                      padding: '0.5rem',
-                      borderRadius: '0.5rem',
-                      border: '1px solid var(--border-color)',
-                      backgroundColor: 'var(--bg-primary)',
-                      color: 'var(--text-primary)',
-                      fontFamily: 'inherit'
+                      width: '100%',
+                      justifyContent: 'space-between',
+                      backgroundColor: 'var(--bg-primary)'
                     }}
                   >
-                    <option value="all">ทั้งหมด</option>
-                    {activityTypes.map(t => (
-                      <option key={t.name} value={t.name}>{t.name}</option>
-                    ))}
-                  </select>
+                    <span>
+                      {typeFilter.includes('all') || typeFilter.length === 0 ? 'ทั้งหมด' : `เลือกแล้ว (${typeFilter.length})`}
+                    </span>
+                    <ChevronDown size={14} />
+                  </button>
+                  {isTableTypeFilterOpen && (
+                    <div className="calendar-dropdown-menu" style={{ width: '100%', boxSizing: 'border-box', minWidth: '200px' }}>
+                      <label className="calendar-dropdown-item">
+                        <input
+                          type="checkbox"
+                          checked={typeFilter.includes('all') || typeFilter.length === 0}
+                          onChange={(e) => {
+                            if (e.target.checked) {
+                              setTypeFilter(['all']);
+                            }
+                          }}
+                        />
+                        <span>ทั้งหมด</span>
+                      </label>
+                      <label className="calendar-dropdown-item">
+                        <input
+                          type="checkbox"
+                          checked={typeFilter.includes('document')}
+                          onChange={(e) => {
+                            let newFilter = typeFilter.filter(x => x !== 'all');
+                            if (e.target.checked) {
+                              newFilter.push('document');
+                            } else {
+                              newFilter = newFilter.filter(x => x !== 'document');
+                            }
+                            if (newFilter.length === 0) newFilter = ['all'];
+                            setTypeFilter(newFilter);
+                          }}
+                        />
+                        <span>หนังสือสารบรรณ / เอกสาร</span>
+                      </label>
+                      {activityTypes.map(type => (
+                        <label key={type.id || type.name} className="calendar-dropdown-item">
+                          <input
+                            type="checkbox"
+                            checked={typeFilter.includes(type.name)}
+                            onChange={(e) => {
+                              let newFilter = typeFilter.filter(x => x !== 'all');
+                              if (e.target.checked) {
+                                newFilter.push(type.name);
+                              } else {
+                                newFilter = newFilter.filter(x => x !== type.name);
+                              }
+                              if (newFilter.length === 0) newFilter = ['all'];
+                              setTypeFilter(newFilter);
+                            }}
+                          />
+                          <span>{type.name}</span>
+                        </label>
+                      ))}
+                    </div>
+                  )}
                 </div>
 
                 {/* Visibility Filter */}
@@ -988,28 +1041,76 @@ const CalendarView = () => {
         <>
           <div className="calendar-toolbar">
             <div style={{ display: 'flex', gap: '1rem', alignItems: 'center', flexWrap: 'wrap' }}>
-              {/* Type Filter (Buttons) */}
-              <div className="calendar-filters">
-                {filterOrder.map((t, index) => (
-                  <button
-                    key={t}
-                    draggable
-                    onDragStart={(e) => onDragStart(e, index)}
-                    onDragOver={(e) => onDragOver(e, index)}
-                    onDragEnd={onDragEnd}
-                    onClick={() => setFilter(t)}
-                    className={`calendar-filter-btn ${filter === t ? 'active' : ''}`}
-                    style={{ cursor: 'grab' }}
-                  >
-                    {t === 'all' ? 'ทั้งหมด' : t}
-                  </button>
-                ))}
+              {/* Type Filter (Dropdown Selector) */}
+              <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', position: 'relative' }}>
+                <button
+                  onClick={() => { setIsTypeFilterOpen(!isTypeFilterOpen); setIsUserFilterOpen(false); }}
+                  className="calendar-dropdown-btn"
+                >
+                  <Filter size={16} />
+                  <span>
+                    {filter.includes('all') || filter.length === 0 ? 'ประเภท: ทั้งหมด' : `เลือกประเภท (${filter.length})`}
+                  </span>
+                  <ChevronDown size={14} style={{ marginLeft: 'auto' }} />
+                </button>
+                {isTypeFilterOpen && (
+                  <div className="calendar-dropdown-menu" style={{ minWidth: '220px' }}>
+                    <label className="calendar-dropdown-item">
+                      <input
+                        type="checkbox"
+                        checked={filter.includes('all') || filter.length === 0}
+                        onChange={(e) => {
+                          if (e.target.checked) {
+                            setFilter(['all']);
+                          }
+                        }}
+                      />
+                      <span>ทั้งหมด</span>
+                    </label>
+                    <label className="calendar-dropdown-item">
+                      <input
+                        type="checkbox"
+                        checked={filter.includes('document')}
+                        onChange={(e) => {
+                          let newFilter = filter.filter(x => x !== 'all');
+                          if (e.target.checked) {
+                            newFilter.push('document');
+                          } else {
+                            newFilter = newFilter.filter(x => x !== 'document');
+                          }
+                          if (newFilter.length === 0) newFilter = ['all'];
+                          setFilter(newFilter);
+                        }}
+                      />
+                      <span>หนังสือสารบรรณ / เอกสาร</span>
+                    </label>
+                    {activityTypes.map(type => (
+                      <label key={type.id || type.name} className="calendar-dropdown-item">
+                        <input
+                          type="checkbox"
+                          checked={filter.includes(type.name)}
+                          onChange={(e) => {
+                            let newFilter = filter.filter(x => x !== 'all');
+                            if (e.target.checked) {
+                              newFilter.push(type.name);
+                            } else {
+                              newFilter = newFilter.filter(x => x !== type.name);
+                            }
+                            if (newFilter.length === 0) newFilter = ['all'];
+                            setFilter(newFilter);
+                          }}
+                        />
+                        <span>{type.name}</span>
+                      </label>
+                    ))}
+                  </div>
+                )}
               </div>
 
               {/* Participant Filter (Dropdown) */}
               <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', position: 'relative' }}>
                 <button
-                  onClick={() => setIsUserFilterOpen(!isUserFilterOpen)}
+                  onClick={() => { setIsUserFilterOpen(!isUserFilterOpen); setIsTypeFilterOpen(false); }}
                   className="calendar-dropdown-btn"
                 >
                   <Users size={16} />
