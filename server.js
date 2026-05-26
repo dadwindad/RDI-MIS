@@ -49,10 +49,14 @@ const storage = multer.diskStorage({
 
     // Sanitize values to prevent invalid characters in Windows filenames (\ / : * ? " < > |)
     const sanitize = (str) => str.replace(/[^\w\sก-๙.-]/g, '_');
-    const safeAppSource = sanitize(appSource);
-    const safeActivity = sanitize(activity);
-    const safeUploader = sanitize(uploader);
-    const safeOriginalname = sanitize(decodedOriginalname);
+    const safeAppSource = sanitize(appSource).substring(0, 30);
+    const safeActivity = sanitize(activity).substring(0, 50);
+    const safeUploader = sanitize(uploader).substring(0, 30);
+    
+    // Truncate original name while preserving file extension
+    const fileExt = path.extname(decodedOriginalname);
+    const fileBase = path.basename(decodedOriginalname, fileExt);
+    const safeOriginalname = sanitize(fileBase).substring(0, 60) + fileExt;
 
     cb(null, `[${safeAppSource}]_[${safeActivity}]_[${safeUploader}]_${uniqueSuffix}-${safeOriginalname}`);
   }
