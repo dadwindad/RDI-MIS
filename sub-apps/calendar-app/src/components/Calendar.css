@@ -109,7 +109,7 @@
 
 .calendar-grid-header {
   display: grid;
-  grid-template-columns: repeat(7, 1fr);
+  grid-template-columns: repeat(7, minmax(0, 1fr));
   background-color: var(--bg-tertiary);
   border-bottom: 1px solid var(--border-color);
 }
@@ -124,7 +124,7 @@
 
 .calendar-grid {
   display: grid;
-  grid-template-columns: repeat(7, 1fr);
+  grid-template-columns: repeat(7, minmax(0, 1fr));
   grid-auto-rows: minmax(120px, auto);
 }
 
@@ -194,6 +194,7 @@
   align-items: center;
   gap: 0.25rem;
   border-left: 3px solid transparent;
+  min-width: 0;
 }
 .calendar-event.activity {
   background-color: rgba(16, 185, 129, 0.1);

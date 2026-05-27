@@ -355,7 +355,7 @@ const CalendarView = () => {
       fetchEvents();
     } catch (error) {
       console.error('Error creating event:', error);
-      showAlert('เกิดข้อผิดพลาดในการบันทึกกิจกรรม', 'error');
+      showAlert(`เกิดข้อผิดพลาดในการบันทึกกิจกรรม: ${error.message}`, 'error');
     } finally {
       setSubmitting(false);
     }
@@ -1221,7 +1221,7 @@ const CalendarView = () => {
                                 borderLeftStyle: 'solid'
                               }}
                             >
-                              <div style={{ display: 'flex', alignItems: 'center', gap: '0.25rem', overflow: 'hidden' }}>
+                              <div style={{ display: 'flex', alignItems: 'center', gap: '0.25rem', overflow: 'hidden', minWidth: 0, flex: 1 }}>
                                 {event.is_deadline_day ? <Clock size={12} style={{ color: '#ef4444' }} /> : (event.event_type === 'activity' ? <CalendarIcon size={12} /> : <AlertCircle size={12} />)}
                                 <span style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
                                   {event.is_deadline_day ? `[DL] ${event.title}` : event.title}
