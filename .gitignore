@@ -12,3 +12,4 @@ sub-apps/*/databases/*.sqlite3
 sub-apps/*/databases/*.db
 sub-apps/*/databases/*.db3
 **/databases/*
+storage/*

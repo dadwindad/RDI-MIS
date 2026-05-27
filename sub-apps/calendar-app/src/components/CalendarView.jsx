@@ -308,7 +308,16 @@ const CalendarView = () => {
                 reject(new Error('Invalid response from upload server'));
               }
             } else {
-              reject(new Error(`Upload failed with status ${xhr.status}`));
+              let errMsg = `Upload failed with status ${xhr.status}`;
+              try {
+                const errData = JSON.parse(xhr.responseText);
+                if (errData && errData.error) {
+                  errMsg = `${errMsg}: ${errData.error}`;
+                }
+              } catch (e) {
+                // Ignore if not JSON
+              }
+              reject(new Error(errMsg));
             }
           };
 

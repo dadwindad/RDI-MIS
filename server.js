@@ -562,6 +562,19 @@ app.post('/api/storage/clear-deleted', (req, res) => {
   });
 });
 
+// Error handling middleware for Multer/Upload and other errors
+app.use((err, req, res, next) => {
+  if (err instanceof multer.MulterError) {
+    console.error('Multer error during upload:', err);
+    return res.status(500).json({ error: `Multer upload error: ${err.message} (${err.code})` });
+  }
+  if (err) {
+    console.error('General server error:', err);
+    return res.status(500).json({ error: `Server error: ${err.message}` });
+  }
+  next();
+});
+
 const PORT = 3801;
 app.listen(PORT, () => {
   console.log(`SQLite Backend Server running on http://localhost:${PORT}`);
