@@ -494,6 +494,13 @@ const CalendarView = () => {
 
   const safeEvents = Array.isArray(events) ? events : [];
   const filteredEvents = safeEvents.filter(event => {
+    // 0. Filter by Search Term (Title / Location / Created By)
+    const matchesSearch =
+      !searchTerm ||
+      event.title.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      (event.location && event.location.toLowerCase().includes(searchTerm.toLowerCase())) ||
+      (event.created_by && event.created_by.toLowerCase().includes(searchTerm.toLowerCase()));
+
     // 1. Filter by Type
     let matchType = true;
     if (filter.length > 0 && !filter.includes('all')) {
@@ -517,7 +524,7 @@ const CalendarView = () => {
       // Documents ignore participant filter and remain visible
     }
 
-    return matchType && matchParticipants;
+    return matchesSearch && matchType && matchParticipants;
   });
 
   const getEventsForDay = (date) => {
@@ -1050,6 +1057,29 @@ const CalendarView = () => {
         <>
           <div className="calendar-toolbar">
             <div style={{ display: 'flex', gap: '1rem', alignItems: 'center', flexWrap: 'wrap' }}>
+              {/* Search Input Filter */}
+              <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', position: 'relative', width: '250px' }}>
+                <Search size={16} style={{ position: 'absolute', left: '0.75rem', color: 'var(--text-secondary)' }} />
+                <input
+                  type="text"
+                  placeholder="ค้นหาชื่อกิจกรรม หรือสถานที่..."
+                  value={searchTerm}
+                  onChange={e => setSearchTerm(e.target.value)}
+                  style={{
+                    width: '100%',
+                    padding: '0.5rem 0.75rem 0.5rem 2.25rem',
+                    borderRadius: '0.5rem',
+                    border: '1px solid var(--border-color)',
+                    backgroundColor: 'var(--bg-primary)',
+                    color: 'var(--text-primary)',
+                    fontFamily: 'inherit',
+                    fontSize: '0.875rem',
+                    height: '36px',
+                    boxSizing: 'border-box'
+                  }}
+                />
+              </div>
+
               {/* Type Filter (Dropdown Selector) */}
               <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', position: 'relative' }}>
                 <button

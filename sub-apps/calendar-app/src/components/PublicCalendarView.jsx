@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Calendar as CalendarIcon, Clock, MapPin, ChevronLeft, ChevronRight, ChevronDown, X, Users, Filter, FileText, AlertCircle } from 'lucide-react';
+import { Calendar as CalendarIcon, Clock, MapPin, ChevronLeft, ChevronRight, ChevronDown, X, Users, Filter, FileText, AlertCircle, Search } from 'lucide-react';
 import './Calendar.css';
 
 const PublicCalendarView = () => {
@@ -17,7 +17,8 @@ const PublicCalendarView = () => {
 
   const [events, setEvents] = useState([]);
   const [loading, setLoading] = useState(true);
-  const [filter, setFilter] = useState('all');
+  const [filter, setFilter] = useState(['all']);
+  const [isTypeFilterOpen, setIsTypeFilterOpen] = useState(false);
   const [currentDate, setCurrentDate] = useState(new Date());
   const [selectedEvent, setSelectedEvent] = useState(null);
   const [activityTypes, setActivityTypes] = useState([]);
@@ -25,6 +26,7 @@ const PublicCalendarView = () => {
   const [availableUsers, setAvailableUsers] = useState([]);
   const [participantFilter, setParticipantFilter] = useState([]);
   const [isUserFilterOpen, setIsUserFilterOpen] = useState(false);
+  const [searchTerm, setSearchTerm] = useState('');
 
   const fetchActivityTypes = async () => {
     try {
@@ -87,9 +89,34 @@ const PublicCalendarView = () => {
 
   const safeEvents = Array.isArray(events) ? events : [];
   const filteredEvents = safeEvents.filter(event => {
-    const matchType = filter === 'all' || event.type === filter || (filter === 'ประชุมภายใน' && (!event.type || event.type === ''));
-    const matchUser = participantFilter.length === 0 || (event.participants && event.participants.some(p => participantFilter.includes(p.core_user_id)));
-    return matchType && matchUser;
+    // 0. Filter by Search Term (Title / Location)
+    const matchesSearch = !searchTerm ||
+      event.title.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      (event.location && event.location.toLowerCase().includes(searchTerm.toLowerCase()));
+
+    // 1. Filter by Type
+    let matchType = true;
+    if (filter.length > 0 && !filter.includes('all')) {
+      matchType = filter.includes(event.type) ||
+                  (filter.includes('document') && event.event_type === 'document') ||
+                  (filter.includes('ประชุมภายใน') && (!event.type || event.type === '') && event.event_type === 'activity');
+    }
+
+    // 2. Filter by Participants
+    let matchParticipants = true;
+    if (participantFilter.length > 0) {
+      if (event.event_type === 'activity') {
+        if (event.participants) {
+          matchParticipants = participantFilter.some(userId =>
+            event.participants.some(p => p.core_user_id === userId)
+          );
+        } else {
+          matchParticipants = false;
+        }
+      }
+    }
+
+    return matchesSearch && matchType && matchParticipants;
   });
 
   const year = currentDate.getFullYear();
@@ -115,16 +142,93 @@ const PublicCalendarView = () => {
 
       <div className="calendar-toolbar">
         <div style={{ display: 'flex', gap: '1rem', alignItems: 'center', flexWrap: 'wrap' }}>
-          <div className="calendar-filters">
-            {filterOrder.map((t) => (
-              <button
-                key={t}
-                onClick={() => setFilter(t)}
-                className={`calendar-filter-btn ${filter === t ? 'active' : ''}`}
-              >
-                {t === 'all' ? 'ทั้งหมด' : t}
-              </button>
-            ))}
+          {/* Search Input Filter */}
+          <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', position: 'relative', width: '250px' }}>
+            <Search size={16} style={{ position: 'absolute', left: '0.75rem', color: 'var(--text-secondary)' }} />
+            <input
+              type="text"
+              placeholder="ค้นหาชื่อกิจกรรม หรือสถานที่..."
+              value={searchTerm}
+              onChange={e => setSearchTerm(e.target.value)}
+              style={{
+                width: '100%',
+                padding: '0.5rem 0.75rem 0.5rem 2.25rem',
+                borderRadius: '0.5rem',
+                border: '1px solid var(--border-color)',
+                backgroundColor: 'var(--bg-primary)',
+                color: 'var(--text-primary)',
+                fontFamily: 'inherit',
+                fontSize: '0.875rem',
+                height: '36px',
+                boxSizing: 'border-box'
+              }}
+            />
+          </div>
+
+          {/* Type Filter (Dropdown Selector) */}
+          <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', position: 'relative' }}>
+            <button
+              onClick={() => { setIsTypeFilterOpen(!isTypeFilterOpen); setIsUserFilterOpen(false); }}
+              className="calendar-dropdown-btn"
+            >
+              <Filter size={16} />
+              <span>
+                {filter.includes('all') || filter.length === 0 ? 'ประเภท: ทั้งหมด' : `เลือกประเภท (${filter.length})`}
+              </span>
+              <ChevronDown size={14} style={{ marginLeft: 'auto' }} />
+            </button>
+            {isTypeFilterOpen && (
+              <div className="calendar-dropdown-menu" style={{ minWidth: '220px' }}>
+                <label className="calendar-dropdown-item">
+                  <input
+                    type="checkbox"
+                    checked={filter.includes('all') || filter.length === 0}
+                    onChange={(e) => {
+                      if (e.target.checked) {
+                        setFilter(['all']);
+                      }
+                    }}
+                  />
+                  <span>ทั้งหมด</span>
+                </label>
+                <label className="calendar-dropdown-item">
+                  <input
+                    type="checkbox"
+                    checked={filter.includes('document')}
+                    onChange={(e) => {
+                      let newFilter = filter.filter(x => x !== 'all');
+                      if (e.target.checked) {
+                        newFilter.push('document');
+                      } else {
+                        newFilter = newFilter.filter(x => x !== 'document');
+                      }
+                      if (newFilter.length === 0) newFilter = ['all'];
+                      setFilter(newFilter);
+                    }}
+                  />
+                  <span>หนังสือสารบรรณ / เอกสาร</span>
+                </label>
+                {activityTypes.filter(type => type.name !== 'ลากิจ/ลาป่วย').map(type => (
+                  <label key={type.id || type.name} className="calendar-dropdown-item">
+                    <input
+                      type="checkbox"
+                      checked={filter.includes(type.name)}
+                      onChange={(e) => {
+                        let newFilter = filter.filter(x => x !== 'all');
+                        if (e.target.checked) {
+                          newFilter.push(type.name);
+                        } else {
+                          newFilter = newFilter.filter(x => x !== type.name);
+                        }
+                        if (newFilter.length === 0) newFilter = ['all'];
+                        setFilter(newFilter);
+                      }}
+                    />
+                    <span>{type.name}</span>
+                  </label>
+                ))}
+              </div>
+            )}
           </div>
 
           <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', position: 'relative' }}>
