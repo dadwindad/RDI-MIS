@@ -23,7 +23,7 @@ const CalendarView = () => {
   const [isTypeFilterOpen, setIsTypeFilterOpen] = useState(false);
   const [participantFilter, setParticipantFilter] = useState([]); // Array of core_user_id
   const [isUserFilterOpen, setIsUserFilterOpen] = useState(false);
-  const [currentDate, setCurrentDate] = useState(new Date('2026-05-01T00:00:00'));
+  const [currentDate, setCurrentDate] = useState(() => { const d = new Date(); return new Date(d.getFullYear(), d.getMonth(), 1); });
   const [selectedEvent, setSelectedEvent] = useState(null);
   const [isAddingEvent, setIsAddingEvent] = useState(false);
   const [newEvent, setNewEvent] = useState({ id: null, title: '', type: 'ประชุมภายใน', start_date: '', end_date: '', deadline: '', location: '', participants: [], storage_path: '', visibility: 'INTERNAL' });
