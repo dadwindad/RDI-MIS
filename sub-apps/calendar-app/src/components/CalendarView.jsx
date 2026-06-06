@@ -1537,7 +1537,7 @@ const CalendarView = () => {
           {/* Manage Types Modal */}
           {isManagingTypes && (
             <div className="calendar-modal-overlay">
-              <div className="calendar-modal">
+              <div className="calendar-modal" style={{ maxHeight: '90vh', display: 'flex', flexDirection: 'column' }}>
                 <div className="calendar-modal-header">
                   <h3 className="calendar-title" style={{ fontSize: '1.25rem' }}>จัดการประเภทกิจกรรม</h3>
                   <button onClick={() => setIsManagingTypes(false)} className="calendar-icon-btn">
@@ -1545,7 +1545,7 @@ const CalendarView = () => {
                   </button>
                 </div>
 
-                <div className="calendar-modal-body">
+                <div className="calendar-modal-body" style={{ overflowY: 'auto', flex: 1 }}>
                   {/* List of Types */}
                   <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
                     {activityTypes.map(t => (
